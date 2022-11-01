@@ -1,3 +1,4 @@
+# Enable `pip install` for your package
 from setuptools import find_packages
 from setuptools import setup
 
