@@ -1,0 +1,8 @@
+pandas
+numpy
+tensorflow
+scikit-learn
+matplotlib
+seaborn
+google.cloud
+pyarrow
