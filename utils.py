@@ -3,25 +3,138 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import datetime
+import requests
+from datetime import timedelta
 
-
+root_path = '~/.velov/data/'
 raw_data_path = '~/.velov/data/raw/'
 cleaned_data_path = '~/.velov/data/cleaned/'
 
+def get_stations_info(source = 'local',save_csv = False) -> pd.DataFrame:
+    '''
+    This function gathers the main information for all stations, from a local csv file if it exists, from the velov API if not.
 
-def get_station(number:int, start_date:datetime.date='2000-01-01') -> pd.DataFrame:
+    input : a source type (default 'local') and a boolean value indicating whether the results is saved as a csv
+    ---
+    return : a dataframe containing relevant information for all velov stations (identification number, availability code, number of bike stands, latitude,
+    longitude, station name, station pole, station capacity)
+
+    '''
+    if source == 'local':
+        station_info = pd.read_csv(f'{root_path}stations.csv')
+        station_info.drop(columns = ['Unnamed: 0'],inplace = True)
+    
+    else:
+        url_info = "https://download.data.grandlyon.com/ws/rdata/jcd_jcdecaux.jcdvelov/all.json?compact=false"
+        response_numbers = requests.get(url_info)
+        station_list = response_numbers.json()['values']
+        station_number = []
+        station_availability = []
+        station_bike_stands = []
+        station_address = []
+        station_lat = []
+        station_lng = []
+        station_name = []
+        station_pole = []
+        station_capacity = []
+
+        for station in station_list:
+            station_number.append(station['number'])
+            station_availability.append(station['availabilitycode'])
+            station_bike_stands.append(station['bike_stands'])
+            station_address.append(station['address'])
+            station_lat.append(station['lat'])
+            station_lng.append(station['lng'])
+            station_name.append(station['name'])
+            station_pole.append(station['pole'])
+            station_capacity.append(station['total_stands']['capacity'])
+        station_info = pd.DataFrame([station_number, station_availability, station_bike_stands, station_address,
+                station_lat, station_lng,station_name, station_pole, station_capacity],
+            index=['station_number','availabilitycode','bike_stands','address','lat','lng','name','pole','capacity']).transpose()
+        if save_csv:
+            station_info.to_csv(f'{root_path}stations.csv',header=True)
+        
+    
+    return station_info
+
+
+def get_station(number:int, start_date:datetime.date='2000-01-01', source = 'local', save_csv = False) -> pd.DataFrame:
     """
-    input : a station number and a start date
+    input : a station number, a start date, a source (default : 'local') and a boolean indicating whether to save as csv or not
     ---
     return : a dataframe of all timestamps for the given station
     
     """
-    
-    df = pd.read_csv(raw_data_path+'station'+str(number)+'.csv').drop(columns=['Unnamed: 0']).rename(columns={'0':'time'}).sort_values(by='time').reset_index()
-    
-    df['time']=pd.to_datetime(df['time'])
+    if source == 'local':
+        # looks for the corresponding local csv file to obtain historical data
+        df = pd.read_csv(raw_data_path+'station'+str(number)+'.csv').drop(columns=['Unnamed: 0']).rename(columns={'0':'time'}).sort_values(by='time').reset_index().drop(columns='index')
+    elif source == 'api':
+        # calls the API to obtain historical data    
+        url = f'https://download.data.grandlyon.com/ws/timeseries/jcd_jcdecaux.historiquevelov/all.json?field=number&value={number}&compact=true&maxfeatures=1000000'
+        response = requests.get(url)
+        data = response.json()
+        values = data['values']
+        horodate =[]
+        electrical_bikes =[]
+        mechanical_bikes =[]
+        stands=[]
+        
+        for item in values:
+            horodate.append(item['horodate'])
+            electrical_bikes.append(item['main_stands']['availabilities']['electricalBikes'])
+            mechanical_bikes.append(item['main_stands']['availabilities']['mechanicalBikes'])
+            stands.append(item['main_stands']['availabilities']['stands'])
+        df = pd.DataFrame(horodate)
+        df['electrical_bikes']=electrical_bikes
+        df['mechanical_bikes']=mechanical_bikes
+        df['stands']=stands
+        df = df.rename(columns={0:'time'}).sort_values(by='time').reset_index().drop(columns=['index'])
+
+    df['time']=pd.to_datetime(df['time'],utc=True)
     df = df[df['time']>= f"{start_date}"]
+    if save_csv:
+        df.to_csv(f'{raw_data_path}/station{number}.csv',header=True)
     return df
+
+def get_all_data(source = 'local',save_csv = False) -> list:
+    '''
+    Use this function to obtain all the data at once.
+    '''
+    station_info = get_stations_info(source = source,save_csv = False)
+    return [get_station(number,source,save_csv) for number in station_info.station_number]
+
+def get_last_week_station(number) -> pd.DataFrame:
+    '''
+    This function returns a DataFrame containing the last seven days of data for the station identified by 'number'. The DataFrame contains:
+    index : 5-minutes timestamps
+    bikes : total number of available bikes at a given timestamp in the station
+    bike_stands : total number of available bike stands at a given timestamp in the station
+    '''
+    today = (str(datetime.today())[:-7] + 'Z').replace(' ','T')
+    previous = (str(datetime.today() - timedelta(days=7))[:-7] + 'Z').replace(' ','T')
+    url = f'https://download.data.grandlyon.com/sos/velov?request=GetObservation&service=SOS&version=1.0.0&offering=reseau_velov&procedure=velov-{number}&observedProperty=bikes,bike-stands&eventTime={previous}/{today}&responseFormat=application/json'
+    response = requests.get(url)
+    df = pd.DataFrame(response.json()['ObservationCollection']['member'][0]['result']['DataArray']['values'],columns=['time','bikes','bike_stands'])
+    df['time']=pd.to_datetime(df['time'])
+    df = df.set_index('time')
+    df = df.astype(float).astype(int)
+    return df
+
+def get_live_status() -> pd.DataFrame:
+    '''
+    Returns the live status of the whole vélov system as a DataFrame with:
+    time : timestamp of the last update for a given station
+    station_number : identification number of the station
+    bikes : number of available bikes at a given station at the given timestamp
+    bike_stands : number of available bike stands at a given station at the given timestamp
+    '''
+    url_live_status = 'https://transport.data.gouv.fr/gbfs/lyon/station_status.json'
+    response = requests.get(url_live_status)
+    live_df = pd.DataFrame(response.json()['data']['stations'])
+    live_df['time']=live_df['last_reported'].apply(datetime.fromtimestamp)
+    live_df = live_df.rename(columns={'num_bikes_available':'bikes','num_docks_available':'bike_stands','station_id':'station_number'})
+    live_df = live_df[['time','bikes','bike_stands','station_number']].set_index('time')
+    return live_df
 
 def plot_station(number:int, date_init:datetime.date, date_end:datetime.date):
     """
