@@ -1,11 +1,7 @@
 import streamlit as st
-import requests
-import datetime
 import pandas as pd
-import numpy as np
 
 import pydeck as pdk
-import plotly.express as px
 
 import utils
 
@@ -46,9 +42,9 @@ hexa_layer = pdk.Layer(
     data=stations_info[['lng', 'lat']].rename(columns={'lng': 'lon'}),
     get_position=['lon', 'lat'],
     get_elevation=['bikes'],
-    radius=200,
-    elevation_scale=4,
-    elevation_range=[0, 50],
+    radius=20,
+    elevation_scale=1,
+    elevation_range=[0, 1000],
     pickable=True,
     extruded=True,
 )
@@ -65,8 +61,8 @@ st.pydeck_chart(
     pdk.Deck(
         initial_view_state=view_state,
         layers=[
-            #hexa_layer,
-            scatter_layer,
+            hexa_layer,
+            #scatter_layer,
         ],
     ))
 
