@@ -14,4 +14,4 @@ def clean_station(number:int, start_date:datetime.date='2000-01-01', step:int=5)
     """
     step_str = f'{step}min'
     df = get_station(number, start_date)
-    return df.resample(step_str, on='time').mean().fillna(method='ffill').drop(columns='index')
+    return df.resample(step_str, on='time').mean().fillna(method='ffill')
