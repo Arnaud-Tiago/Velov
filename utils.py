@@ -23,7 +23,7 @@ def get_stations_info(source = 'local',save_csv = False) -> pd.DataFrame:
     if source == 'local':
         station_info = pd.read_csv(f'{root_path}stations.csv')
         station_info.drop(columns = ['Unnamed: 0'],inplace = True)
-    
+
     else:
         url_info = "https://download.data.grandlyon.com/ws/rdata/jcd_jcdecaux.jcdvelov/all.json?compact=false"
         response_numbers = requests.get(url_info)
@@ -53,8 +53,8 @@ def get_stations_info(source = 'local',save_csv = False) -> pd.DataFrame:
             index=['station_number','availabilitycode','bike_stands','address','lat','lng','name','pole','capacity']).transpose()
         if save_csv:
             station_info.to_csv(f'{root_path}stations.csv',header=True)
-        
-    
+
+
     return station_info
 
 
@@ -63,13 +63,13 @@ def get_station(number:int, start_date:datetime.date='2000-01-01', source = 'loc
     input : a station number, a start date, a source (default : 'local') and a boolean indicating whether to save as csv or not
     ---
     return : a dataframe of all timestamps for the given station
-    
+
     """
     if source == 'local':
         # looks for the corresponding local csv file to obtain historical data
         df = pd.read_csv(raw_data_path+'station'+str(number)+'.csv').drop(columns=['Unnamed: 0']).rename(columns={'0':'time'}).sort_values(by='time').reset_index().drop(columns='index')
     elif source == 'api':
-        # calls the API to obtain historical data    
+        # calls the API to obtain historical data
         url = f'https://download.data.grandlyon.com/ws/timeseries/jcd_jcdecaux.historiquevelov/all.json?field=number&value={number}&compact=true&maxfeatures=1000000'
         response = requests.get(url)
         data = response.json()
@@ -78,7 +78,7 @@ def get_station(number:int, start_date:datetime.date='2000-01-01', source = 'loc
         electrical_bikes =[]
         mechanical_bikes =[]
         stands=[]
-        
+
         for item in values:
             horodate.append(item['horodate'])
             electrical_bikes.append(item['main_stands']['availabilities']['electricalBikes'])
@@ -147,7 +147,7 @@ def plot_station(number:int, date_init:datetime.date, date_end:datetime.date):
     df = df.set_index('time')
     df = df['stands']
     df.plot()
-    
+
 def to_minute(datetime:datetime.date) -> float:
     """
     input : a datetime.timedelta
@@ -155,7 +155,7 @@ def to_minute(datetime:datetime.date) -> float:
     returns : the corresponding timedelta as a float in minutes
     """
     minutes = datetime.days*24*60 + datetime.seconds/60
-    return minutes 
+    return minutes
 
 
 def fetch_stats(number:int,start_date:datetime.date='2000-01-01') -> tuple :
@@ -169,7 +169,7 @@ def fetch_stats(number:int,start_date:datetime.date='2000-01-01') -> tuple :
         * the mean of the timedltas in minutes
         * the median of the timedeltas in minutes
     of the given station from the given start_date
-    
+
     """
     df = get_station(number,start_date)
     nb = df.shape[0]
@@ -187,7 +187,7 @@ def fetch_stats_stations(start_date:datetime.date='2000-01-01') -> pd.DataFrame:
     ----
     returns : a dataframe with key info and metrics of stations since the specified start_date
     """
-    
+
     station_info = pd.read_csv(raw_data_path+'stations.csv').drop(columns = ['Unnamed: 0'])
     station_info['nb'] = 0
     station_info['min'] = 0
@@ -202,5 +202,32 @@ def fetch_stats_stations(start_date:datetime.date='2000-01-01') -> pd.DataFrame:
         station_info.loc[index,'mean'] = st_mean
         station_info.loc[index,'median'] = st_median
         station_info.loc[index,'max'] = st_max
-        
+
     return station_info
+
+
+def get_elevation_column(dataframe, lat_col_name='lat', lng_col_name='lng'):
+    '''
+    Takes a DataFrame including latitude and longitude as columns
+    Return a Series with elevation (NaN if not found)
+    '''
+
+    def get_elevation(lat, lon):
+        '''
+        Takes lat and lon
+        Call an elevation API
+        Returns elevation (NaN if not found)
+
+        '''
+
+        url = 'https://api.opentopodata.org/v1/eudem25m?'
+        params = {'locations': f'{lat},{lon}'}
+
+        result = requests.get(url=url, params=params, timeout=10).json()
+        if 'results' in result.keys():
+            return result['results'][0]['elevation']
+        return np.nan
+
+    return dataframe.apply(
+        lambda row: get_elevation(row[lat_col_name], row[lng_col_name]),
+        axis=1)
