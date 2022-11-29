@@ -1,13 +1,15 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 import datetime
 
 
-data_path = '~/.velov/data/'
+raw_data_path = '~/.velov/data/raw/'
+cleaned_data_path = '~/.velov/data/cleaned/'
 
 
-def get_station(number, start_date='2000-01-01'):
+def get_station(number:int, start_date:datetime.date='2000-01-01') -> pd.DataFrame:
     """
     input : a station number and a start date
     ---
@@ -15,13 +17,13 @@ def get_station(number, start_date='2000-01-01'):
     
     """
     
-    df = pd.read_csv(data_path+'station'+str(number)+'.csv').drop(columns=['Unnamed: 0']).rename(columns={'0':'time'}).sort_values(by='time').reset_index()
+    df = pd.read_csv(raw_data_path+'station'+str(number)+'.csv').drop(columns=['Unnamed: 0']).rename(columns={'0':'time'}).sort_values(by='time').reset_index()
     
     df['time']=pd.to_datetime(df['time'])
     df = df[df['time']>= f"{start_date}"]
     return df
 
-def plot_station(number, date_init, date_end):
+def plot_station(number:int, date_init:datetime.date, date_end:datetime.date):
     """
     input : a station number, a start_date and an end_date
     ---
@@ -33,7 +35,7 @@ def plot_station(number, date_init, date_end):
     df = df['stands']
     df.plot()
     
-def to_minute(datetime):
+def to_minute(datetime:datetime.date) -> float:
     """
     input : a datetime.timedelta
     ---
@@ -43,7 +45,7 @@ def to_minute(datetime):
     return minutes 
 
 
-def fetch_stats(number,start_date='2000-01-01'):
+def fetch_stats(number:int,start_date:datetime.date='2000-01-01') -> tuple :
     """
     input : a station number and a start_date
     ---
@@ -66,14 +68,14 @@ def fetch_stats(number,start_date='2000-01-01'):
 
     return nb, st_min, st_max, st_mean, st_median
 
-def fetch_stats_stations(start_date='2000-01-01'):
+def fetch_stats_stations(start_date:datetime.date='2000-01-01') -> pd.DataFrame:
     """
     input : (optionnal) a start_date
     ----
     returns : a dataframe with key info and metrics of stations since the specified start_date
     """
     
-    station_info = pd.read_csv(data_path+'stations.csv').drop(columns = ['Unnamed: 0'])
+    station_info = pd.read_csv(raw_data_path+'stations.csv').drop(columns = ['Unnamed: 0'])
     station_info['nb'] = 0
     station_info['min'] = 0
     station_info['mean'] = 0
