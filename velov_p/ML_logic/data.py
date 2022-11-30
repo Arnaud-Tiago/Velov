@@ -1,110 +1,54 @@
-# Save, load and clean data
+#save data from cloud
 import os
 import pandas as pd
-from google.cloud import bigquery
+from google.cloud import storage
+import datetime
 
-def clean_data(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    clean raw data by removing buggy or irrelevant transactions
-    or columns for the training set
-    """
-    # remove useless/redundant columns
+df=pd.read_csv("~/.velov/data/raw/station1.csv")
 
-    # remove elements not usefull or rapresentative
+#save new blob in bucket
+def save_data(df):
+    if os.environ.get("DATA_SOURCE_LOAD")=="big-query":
+        client = storage.Client() # use service account credentials
+        bucket_name=os.environ.get("BUCKET_NAME_RAW")
+        export_bucket = client.get_bucket(bucket_name) #define bucket
+        blob_name=os.environ.get("BLOB_NAME")
+        date=format(datetime.datetime.now().strftime("%Y-%m-%d %H_%M_%S"))
+        export_bucket.blob(f"{blob_name} - {date}").upload_from_string(df.to_csv(),"text/csv")
+        print("new blob created")
+        return None
 
-#load data
-def load_data():
-    if os.environ.get("DATA_SOURCE")=="big-query":
-        cloud_project_name=os.environ.get("PROJECT")
-        cloud_dataset_name=os.environ.get("DATASET_CLOUD_NAME")
-        cloud_table_name=os.environ.get("CLOUD_TABLE")
-        table = f"{cloud_project_name}.{cloud_dataset_name}.{cloud_table_name}"
-        client = bigquery.Client()
-        rows = client.list_rows(table)
-        df = rows.to_dataframe()
-
-    else:
-        df_local_name=os.environ.get("DATASET_LOCAL_NAME")
-        df_local_path=os.environ.get("LOCAL_DATA_PATH_RAW")
-        path=os.path.join(f"{df_local_path}",f"{df_local_name}")
-        df=pd.read_csv(f"{path}.csv")
-
-    return df
-
-def save_data(data):
-    if os.environ.get("DATA_SOURCE")=="big-query":
-        cloud_project_name=os.environ.get("PROJECT")
-        cloud_dataset_name=os.environ.get("DATASET_CLOUD_NAME")
-        cloud_table_name=os.environ.get("CLOUD_TABLE")
-        job_config = bigquery.LoadJobConfig( write_disposition = write_mode)
-        client = bigquery.Client()
-        table = f"{cloud_project_name}.{cloud_dataset_name}.{cloud_table_name}"
-        job = client.load_table_from_dataframe(
-            data, table, job_config=job_config)  # Make an API request.
-        return job.result()  # Wait for the job to complete.
-
+    #save in local
     else:
         df_local_name=os.environ.get("DATASET_LOCAL_NAME")
         df_local_path=os.environ.get("LOCAL_DATA_PATH_CLEAN")
         path=os.path.join(f"{df_local_path}",f"{df_local_name}")
-        return data.to_csv(f"{path}.csv")
+        print("local saved")
+        return df.to_csv(f"{path}.csv")
 
+#download blob
+def download_blob():
 
+    if os.environ.get("DATA_SOURCE_LOAD")=="big-query":
+        client = storage.Client() # use service account credentials
+        bucket_name=os.environ.get("BUCKET_NAME_RAW")
+        bucket = client.bucket(bucket_name) #define bucket
+        blob_name=os.environ.get("BLOB_NAME")
+        #date=format(datetime.datetime.now().strftime("%Y-%m-%d %H_%M_%S"))
+        bucket.blob(f"{blob_name}").download_to_file("prova1.csv")
+        print("done")
+    return None
+    '''
+    BUCKET_NAME = "raw/velov_bucket"
+    storage_filename = "velov-blob1 - 2022-11-30 12_42_48"
+    local_filename = "prova1.csv"
+
+    client = storage.Client()
+    bucket = client.bucket(BUCKET_NAME)
+    blob = bucket.blob(storage_filename)
+    blob.download_to_filename(local_filename)
+    print("done")'''
 
 
 if __name__=="__main__":
-    save_data(load_data())
-
-
-
-    '''
-    """
-    return a chunk of the raw dataset from local disk or cloud storage
-    """
-    path = os.path.join(os.path.expanduser(LOCAL_DATA_PATH)
-        os.path.expanduser(LOCAL_DATA_PATH),
-        "processed" if "processed" in path else "raw",
-        f"{path}.csv")
-
-    if verbose:
-        print(Fore.MAGENTA + f"Source data from {path}: {chunk_size if chunk_size is not None else 'all'} rows (from row {index})" + Style.RESET_ALL)
-
-    try:
-
-        df = pd.read_csv(
-                path,
-                skiprows=index + 1,  # skip header
-                nrows=chunk_size,
-                dtype=dtypes,
-                header=None)  # read all rows
-
-
-
-
-
-
-        return None  # end of data
-
-    return df
-
-
-
-
-
-
-
-        return chunk_df
-
-    chunk_df = get_pandas_chunk(path=source_name,
-                                index=index,
-                                chunk_size=chunk_size,
-                                dtypes=dtypes,
-                                columns=columns,
-                                verbose=verbose)
-
-    return chunk_df
-
-    print("\n✅ data cleaned")
-
-    return df
-'''
+    download_blob()
