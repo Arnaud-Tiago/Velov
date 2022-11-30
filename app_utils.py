@@ -1,8 +1,6 @@
 import pandas as pd
 import pydeck as pdk
 
-import utils
-
 def create_scatter_layer(data, color):
     '''
     Takes a DataFrame with 'lng' and 'lat' columns
@@ -55,7 +53,7 @@ def classify_station(station_data: pd.DataFrame) -> pd.DataFrame:
     classified_station_data = station_data.copy()
     classified_station_data['status_code'] = classified_station_data.apply(
         lambda x: classify(x.bikes, x.bike_stands,
-                           utils.get_stations_info().capacity.values[0]),
+                           station_data.capacity.values[0]),
         axis=1)
     classified_station_data['status'] = classified_station_data[
         'status_code'].map({

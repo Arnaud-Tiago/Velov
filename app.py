@@ -33,7 +33,7 @@ st.write('Welcome to the Velo\'V prediction app')
 ## Pre-treatment
 
 # Static data extraction (locally)
-stations_info = get_stations_info(source='local')
+stations_info = get_stations_info(source='online')
 
 stations_info = stations_info[(stations_info['lng'] != 0)
                               & (stations_info['lng'] != 0)]
