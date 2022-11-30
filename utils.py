@@ -205,6 +205,38 @@ def fetch_stats_stations(start_date:datetime.date='2000-01-01') -> pd.DataFrame:
 
     return station_info
 
+def find_missing_data(threshold:int, start_date:datetime.date = '2000-01-01') -> pd.DataFrame:
+    """
+    input : a threshold as an integer (in minutes) and a (optionnal) start date
+    ----
+    returns : a DataFrame with :
+        * the date (truncated at hours level)
+        * the timedeltas 
+    
+    """
+    
+    station_info = pd.read_csv(raw_data_path+'stations.csv').drop(columns = ['Unnamed: 0'])
+    first = True
+    
+    for index, row in station_info.iterrows():
+        df = get_station(row['station_number'], start_date= start_date)
+        df['td']=df['time'].diff().map(to_minute)
+        df = df[df['td']> threshold]
+        df = df[['time','td']].set_index('time')
+        df = df.resample('H').median().dropna().reset_index()
+        if first == True :
+            deltas_df = df.copy()
+            first = False
+        else :
+            deltas_df = pd.concat([deltas_df,df])
+
+
+    deltas_df['td_bracket_hrs']=deltas_df['td']//60
+    deltas_df = deltas_df.groupby(['time','td_bracket_hrs']).count()
+    deltas_df = deltas_df.reset_index().set_index('time').sort_values('td_bracket_hrs',ascending = False).rename(columns={'td':'count'})    
+    
+    
+    return deltas_df
 
 def get_elevation_column(dataframe, lat_col_name='lat', lng_col_name='lng'):
     '''
