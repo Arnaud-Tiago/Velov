@@ -43,8 +43,8 @@ def get_stations_info(source = 'local',save_csv = False) -> pd.DataFrame:
             station_availability.append(station['availabilitycode'])
             station_bike_stands.append(station['bike_stands'])
             station_address.append(station['address'])
-            station_lat.append(station['lat'])
-            station_lng.append(station['lng'])
+            station_lat.append(float(station['lat']))
+            station_lng.append(float(station['lng']))
             station_name.append(station['name'])
             station_pole.append(station['pole'])
             station_capacity.append(station['total_stands']['capacity'])
@@ -282,21 +282,5 @@ def get_elevation_column(dataframe, lat_col_name='lat', lng_col_name='lng'):
         lambda row: get_elevation(row[lat_col_name], row[lng_col_name]),
         axis=1)
 
-def get_clean_dataframes() -> pd.DataFrame:
-    '''
-    returns a dataframe with the number of bikes for each station at any given timestamp from the cleaned historical dataset
-    uses the cleaned overall .csv file
-    '''
-    data = pd.read_csv(cleaned_data_path+'all_station.csv')
-    first_station = data.station_number.unique()[0]
-    df = data[data['station_number']==first_station]
-    bikes_df = df[['time','bikes']].rename(columns = {'bikes':f'station_{first_station}'})
-    stands_df = df[['time','stands']].rename(columns = {'stands':f'station_{first_station}'})
-    for number in np.delete(data.station_number.unique(),0):
-        temp_df = data[data['station_number']==number]
-        temp_bikes_df = temp_df[['time','bikes']].rename(columns={'bikes':f'station_{number}'})
-        temp_stands_df = temp_df[['time','stands']].rename(columns ={'stands':f'station_{number}'})
-        bikes_df = bikes_df.merge(temp_bikes_df,on='time',how='outer')
-        stands_df = stands_df.merge(temp_stands_df,on='time',how='outer')
-    return bikes_df,stands_df
+
     
