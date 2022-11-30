@@ -1,8 +1,6 @@
 import pandas as pd
 import pydeck as pdk
 
-import utils
-
 def create_scatter_layer(data, color):
     '''
     Takes a DataFrame with 'lng' and 'lat' columns

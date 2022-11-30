@@ -128,8 +128,8 @@ def get_last_week_station(number) -> pd.DataFrame:
     bikes : total number of available bikes at a given timestamp in the station
     bike_stands : total number of available bike stands at a given timestamp in the station
     '''
-    today = (str(datetime.today())[:-7] + 'Z').replace(' ','T')
-    previous = (str(datetime.today() - timedelta(days=10))[:-7] + 'Z').replace(' ','T')
+    today = (str(dt.today())[:-7] + 'Z').replace(' ','T')
+    previous = (str(dt.today() - timedelta(days=10))[:-7] + 'Z').replace(' ','T')
     url = f'https://download.data.grandlyon.com/sos/velov?request=GetObservation&service=SOS&version=1.0.0&offering=reseau_velov&procedure=velov-{number}&observedProperty=bikes,bike-stands&eventTime={previous}/{today}&responseFormat=application/json'
     response = requests.get(url)
     df = pd.DataFrame(response.json()['ObservationCollection']['member'][0]['result']['DataArray']['values'],columns=['time','bikes','bike_stands'])
