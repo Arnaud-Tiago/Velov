@@ -1,8 +1,10 @@
+import datetime
+from datetime import datetime as dt
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from datetime import datetime
+
 import requests
 from datetime import timedelta
 
@@ -149,7 +151,7 @@ def get_live_status() -> pd.DataFrame:
     url_live_status = 'https://transport.data.gouv.fr/gbfs/lyon/station_status.json'
     response = requests.get(url_live_status)
     live_df = pd.DataFrame(response.json()['data']['stations'])
-    live_df['time']=live_df['last_reported'].apply(datetime.fromtimestamp)
+    live_df['time']=live_df['last_reported'].apply(dt.fromtimestamp)
     live_df = live_df.rename(columns={'num_bikes_available':'bikes','num_docks_available':'bike_stands','station_id':'station_number'})
     live_df = live_df[['time','bikes','bike_stands','station_number']].set_index('time')
     return live_df
@@ -229,13 +231,13 @@ def find_missing_data(threshold:int, start_date:datetime.date = '2000-01-01') ->
     ----
     returns : a DataFrame with :
         * the date (truncated at hours level)
-        * the timedeltas 
-    
+        * the timedeltas
+
     """
-    
+
     station_info = pd.read_csv(raw_data_path+'stations.csv').drop(columns = ['Unnamed: 0'])
     first = True
-    
+
     for index, row in station_info.iterrows():
         df = get_station(row['station_number'], start_date= start_date)
         df['td']=df['time'].diff().map(to_minute)
@@ -251,9 +253,9 @@ def find_missing_data(threshold:int, start_date:datetime.date = '2000-01-01') ->
 
     deltas_df['td_bracket_hrs']=deltas_df['td']//60
     deltas_df = deltas_df.groupby(['time','td_bracket_hrs']).count()
-    deltas_df = deltas_df.reset_index().set_index('time').sort_values('td_bracket_hrs',ascending = False).rename(columns={'td':'count'})    
-    
-    
+    deltas_df = deltas_df.reset_index().set_index('time').sort_values('td_bracket_hrs',ascending = False).rename(columns={'td':'count'})
+
+
     return deltas_df
 
 def get_elevation_column(dataframe, lat_col_name='lat', lng_col_name='lng'):
@@ -281,6 +283,3 @@ def get_elevation_column(dataframe, lat_col_name='lat', lng_col_name='lng'):
     return dataframe.apply(
         lambda row: get_elevation(row[lat_col_name], row[lng_col_name]),
         axis=1)
-
-
-    
