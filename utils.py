@@ -132,7 +132,8 @@ def get_last_week_station(number) -> pd.DataFrame:
     response = requests.get(url)
     df = pd.DataFrame(response.json()['ObservationCollection']['member'][0]['result']['DataArray']['values'],columns=['time','bikes','bike_stands'])
     df.rename(columns = {'bike_stands':'stands'}, inplace=True)
-    df['time']=pd.to_datetime(df['time'])
+    df['time']=pd.to_datetime(df['time'], utc=True)
+
     df = df.set_index('time')
     df = df.astype(float).astype(int)
     return df
@@ -286,7 +287,7 @@ def get_clean_dataframes() -> pd.DataFrame:
     returns a dataframe with the number of bikes for each station at any given timestamp from the cleaned historical dataset
     uses the cleaned overall .csv file
     '''
-    data = pd.read_csv('~/.velov/data/all_station.csv')
+    data = pd.read_csv(cleaned_data_path+'all_station.csv')
     first_station = data.station_number.unique()[0]
     df = data[data['station_number']==first_station]
     bikes_df = df[['time','bikes']].rename(columns = {'bikes':f'station_{first_station}'})
