@@ -115,6 +115,7 @@ def get_last_week_station(number) -> pd.DataFrame:
     url = f'https://download.data.grandlyon.com/sos/velov?request=GetObservation&service=SOS&version=1.0.0&offering=reseau_velov&procedure=velov-{number}&observedProperty=bikes,bike-stands&eventTime={previous}/{today}&responseFormat=application/json'
     response = requests.get(url)
     df = pd.DataFrame(response.json()['ObservationCollection']['member'][0]['result']['DataArray']['values'],columns=['time','bikes','bike_stands'])
+    df.rename(columns = {'bike_stands':'stands'}, inplace=True)
     df['time']=pd.to_datetime(df['time'])
     df = df.set_index('time')
     df = df.astype(float).astype(int)
