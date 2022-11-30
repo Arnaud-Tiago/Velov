@@ -3,7 +3,7 @@ import pandas as pd
 
 import pydeck as pdk
 
-import utils
+from utils import get_stations_info, get_live_status
 from app_utils import get_sub_dataframe_from_status,create_scatter_layer,classify_station
 
 
@@ -33,12 +33,13 @@ st.write('Welcome to the Velo\'V prediction app')
 ## Pre-treatment
 
 # Static data extraction (locally)
-stations_info = utils.get_stations_info(source='local')
+stations_info = get_stations_info(source='local')
+
 stations_info = stations_info[(stations_info['lng'] != 0)
                               & (stations_info['lng'] != 0)]
 
 # Merging with live status
-live_status = utils.get_live_status()
+live_status = get_live_status()
 live_status['station_number'] = live_status['station_number'].astype('int64', errors='raise')
 cols_to_keep = ['station_number', 'lat', 'lng', 'capacity']
 stations_and_status = pd.merge(stations_info[cols_to_keep],
@@ -48,7 +49,6 @@ stations_and_status = pd.merge(stations_info[cols_to_keep],
 
 # Creating classification
 stations_and_classification = classify_station(stations_and_status)
-
 
 ## Creating layers
 # Creating the classification layers for the stations
