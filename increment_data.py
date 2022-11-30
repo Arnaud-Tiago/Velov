@@ -54,12 +54,16 @@ def increment_data(source='local', save=False, verbose=False):
     
     clean_df = pd.concat([clean_df,new_df])
     clean_df['time']=pd.to_datetime(clean_df['time'],utc = True)  
+    clean_df.set_index('time',inplace=True)
 
     if verbose :
         print(f"Nombre de lignes dans le DataFrame final : {clean_df.shape[0]:_}.".replace('_',' '))
     
     if save:
-        pass # YOUR CODE HERE
+        if source == 'local':
+            clean_df.to_csv(cleaned_data_path+'all_station.csv', index = 'time')
+        else:
+            pass # YOUR CODE HERE
     
     return clean_df
     
