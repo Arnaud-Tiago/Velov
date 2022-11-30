@@ -10,7 +10,7 @@ root_path = '~/.velov/data/'
 raw_data_path = '~/.velov/data/raw/'
 cleaned_data_path = '~/.velov/data/cleaned/'
 
-def clean_station(number:int, start_date:datetime.date='2000-01-01', step:int=5) -> pd.DataFrame:
+def clean_station(number:int, start_date:datetime.date='2000-01-01', step:int=5, last_ts:datetime.date=None) -> pd.DataFrame:
     """
     input : a station number, a start date, and a step in minutes
     ---
