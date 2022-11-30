@@ -6,6 +6,7 @@ import datetime
 
 from utils import get_station
 
+
 root_path = '~/.velov/data/'
 raw_data_path = '~/.velov/data/raw/'
 cleaned_data_path = '~/.velov/data/cleaned/'

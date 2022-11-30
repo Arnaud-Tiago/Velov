@@ -133,6 +133,7 @@ def get_last_week_station(number) -> pd.DataFrame:
     df = pd.DataFrame(response.json()['ObservationCollection']['member'][0]['result']['DataArray']['values'],columns=['time','bikes','bike_stands'])
     df.rename(columns = {'bike_stands':'stands'}, inplace=True)
     df['time']=pd.to_datetime(df['time'], utc=True)
+
     df = df.set_index('time')
     df = df.astype(float).astype(int)
     return df
