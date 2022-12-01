@@ -1,3 +1,5 @@
+# List all third-party packages to add to your local environment
+#All pack are managed by setup.py
 pandas
 numpy
 tensorflow
@@ -6,4 +8,10 @@ matplotlib
 seaborn
 google.cloud
 pyarrow
+pytest
+pylint
+ipdb
+jupyterlab
+scikit-learn
 streamlit
+
