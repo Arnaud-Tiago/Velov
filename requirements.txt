@@ -14,4 +14,5 @@ ipdb
 jupyterlab
 scikit-learn
 streamlit
-
+fsspec
+gcsfs
