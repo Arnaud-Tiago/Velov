@@ -10,7 +10,6 @@ import requests
 from datetime import timedelta
 
 from utils import get_stations_info, get_last_week_station
-from data import load_data, save_data
 from params import LOCAL_DATA_PATH_CLEAN, LOCAL_DATA_PATH_RAW, LOCAL_ROOT_PATH, BUCKET_NAME
 
 root_path = LOCAL_ROOT_PATH
