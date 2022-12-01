@@ -13,3 +13,5 @@ pylint
 ipdb
 jupyterlab
 scikit-learn
+streamlit
+
