@@ -7,27 +7,34 @@ import requests
 from datetime import timedelta
 
 from utils import get_stations_info, get_last_week_station
+from data import load_data, save_data
+from params import LOCAL_DATA_PATH_CLEAN, LOCAL_DATA_PATH_RAW, LOCAL_ROOT_PATH
 
-root_path = '~/.velov/data/'
-raw_data_path = '~/.velov/data/raw/'
-cleaned_data_path = '~/.velov/data/cleaned/'
+root_path = LOCAL_ROOT_PATH
+raw_data_path = LOCAL_DATA_PATH_RAW
+cleaned_data_path = LOCAL_DATA_PATH_CLEAN
 
-def increment_data(source='local', save=False, verbose=False):
+def increment_data(source='local', save=False, verbose=1):
     """
-    takes the otiginal cleaned_df and increment it with all available unseen data
+    takes the otiginal all_stations_live df and increment it with all available unseen data
+    verbose = 0 will only display loading and saving messages,
+    verbose = 1 only gives key messages,
+    verbose = 2 displays the error (missing stations)
+    
     """
+    valid = {'local','cloud'}
+    if source not in valid:
+        raise ValueError("Error : source must be one of %r." % valid)
     
     station_df = get_stations_info(source = source)
     nb_updated=0
     nb_errors = 0
     
-    if source =='local':
-        clean_df = pd.read_csv(cleaned_data_path+'all_station.csv')
-    else :
-        pass # YOUR CODE HERE
+    clean_df = load_data(table_name= 'all_stations_live', clean=True, provenance=source)
     
-    if verbose :
+    if verbose >0 :
         print(f"Nombre de lignes dans le DataFrame initial : {clean_df.shape[0]:_}.".replace('_',' '))
+        print("Work in progress ... This may take a few minutes ...")
 
     first = True
 
@@ -45,10 +52,10 @@ def increment_data(source='local', save=False, verbose=False):
             nb_updated +=1   
         except :
             nb_errors += 1
-            if verbose :
+            if verbose > 1:
                 print(f"Error on station n° {nb} - not available")
 
-    if verbose :
+    if verbose > 0:
         print(f"Nombre de stations updatées : {nb_updated}. \nNombre de stations non disponibles : {nb_errors}.")
         print(f"Nombre de lignes dajoutées : {new_df.shape[0]:_}.".replace('_',' '))
     
@@ -56,14 +63,11 @@ def increment_data(source='local', save=False, verbose=False):
     clean_df['time']=pd.to_datetime(clean_df['time'],utc = True)  
     clean_df.set_index('time',inplace=True)
 
-    if verbose :
+    if verbose > 0:
         print(f"Nombre de lignes dans le DataFrame final : {clean_df.shape[0]:_}.".replace('_',' '))
     
     if save:
-        if source == 'local':
-            clean_df.to_csv(cleaned_data_path+'all_station.csv', index = 'time')
-        else:
-            pass # YOUR CODE HERE
+        save_data(clean_df, table_name= 'all_stations_live', clean=True ,destination=source)
     
     return clean_df
     
