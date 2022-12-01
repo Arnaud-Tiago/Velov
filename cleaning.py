@@ -136,7 +136,7 @@ def get_clean_dataframes() -> pd.DataFrame:
         * one with bikes
         * one with available stands
     '''
-    data = pd.read_csv(cleaned_data_path+'all_station.csv')
+    data = pd.read_csv(cleaned_data_path+'all_stations_hist.csv')
     first_station = data.station_number.unique()[0]
     df = data[data['station_number']==first_station]
     bikes_df = df[['time','bikes']].rename(columns = {'bikes':f'station_{first_station}'})
@@ -154,7 +154,7 @@ def get_clean_bikes_dataframe() -> pd.DataFrame:
     '''
     returns the cleaned_bike_dataframe
     '''
-    data = pd.read_csv(cleaned_data_path+'all_station.csv')
+    data = pd.read_csv(cleaned_data_path+'all_stations_hist.csv')
     first_station = data.station_number.unique()[0]
     df = data[data['station_number']==first_station]
     bikes_df = df[['time','bikes']].rename(columns = {'bikes':f'station_{first_station}'})
@@ -168,7 +168,7 @@ def get_clean_stands_dataframe() -> pd.DataFrame:
     '''
     returns the cleaned_stands_dataframe
     '''
-    data = pd.read_csv(cleaned_data_path+'all_station.csv')
+    data = pd.read_csv(cleaned_data_path+'all_stations_hist.csv')
     first_station = data.station_number.unique()[0]
     df = data[data['station_number']==first_station]
     stands_df = df[['time','stands']].rename(columns = {'stands':f'station_{first_station}'})
