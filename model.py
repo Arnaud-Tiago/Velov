@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from datetime import timedelta
 from sklearn.metrics import  accuracy_score,mean_squared_error,recall_score,f1_score,precision_score
 from velov import utils
@@ -120,12 +121,7 @@ def compute_metrics(classified_station_data,n_days = 7):
        
     return result
 
-
 #### This part is dedicated to creating a RNN model ####
-
-# bikes_df = cleaning.get_clean_bikes_dataframe()
-# step = 15
-# step_str = f'{step}min'
 
 def get_folds(
     df: pd.DataFrame,
@@ -146,17 +142,7 @@ def get_folds(
         folds.append(df.iloc[i*fold_stride:i*(fold_stride)+fold_length])
     return folds
 
-# FOLD_LENGTH = int(24*60/15 * 90) # 1 month
-    
-# FOLD_STRIDE = int(24*60*7/15) # 1 week 
-
-# TRAIN_TEST_RATIO = 0.66
-
-# INPUT_LENGTH = int(0.5*24*60/15)  # 1/2 day
-
-# bikes_folds = get_folds(bikes_df, FOLD_LENGTH, FOLD_STRIDE)
-
-def train_test_split(fold:pd.DataFrame,
+def train_test_split_fold(fold:pd.DataFrame,
                      train_test_ratio: float,
                      input_length: int) -> tuple[pd.DataFrame]:
     '''
@@ -168,9 +154,6 @@ def train_test_split(fold:pd.DataFrame,
     fold_train = fold.iloc[0 : round(train_test_ratio * len(fold))]
     fold_test = fold.iloc[round(train_test_ratio*len(fold))-input_length:]
     return (fold_train,fold_test)
-
-# OUTPUT_LENGTH = 1
-# SEQUENCE_STRIDE = 1
 
 def get_Xi_yi(
     fold:pd.DataFrame, 
@@ -207,21 +190,69 @@ def get_X_y(
         y.append(y_i)
     return(np.array(X),np.array(y))
 
+# FOLD_LENGTH = int(24*60/15 * 90) # 1 month  
+# FOLD_STRIDE = int(24*60*7/15) # 1 week 
+# TRAIN_TEST_RATIO = 0.66
+# INPUT_LENGTH = int(0.5*24*60/15)  # 1/2 day
+# OUTPUT_LENGTH = 1
+# SEQUENCE_STRIDE = 1
 # N_TRAIN = 6666 # number_of_sequences_train
 # N_TEST =  3333 # number_of_sequences_test
-# X_train_bikes, y_train_bikes = get_X_y(bikes_fold_train, N_TRAIN, INPUT_LENGTH, OUTPUT_LENGTH)
-# X_test_bikes, y_test_bikes = get_X_y(bikes_fold_test, N_TEST, INPUT_LENGTH, OUTPUT_LENGTH)
 
-def full_data_process(
-    n_sequences : int, # number of random sequences that will be created
-    step = 15 : int, # number of minutes in a timestamp (default=15 min)
-    ):
+def train_test_split(
+    n_sequences = 100,
+    step = 15,
+    fold_length = int(24*60/15 * 90),
+    fold_stride = int(24*60*7/15),
+    train_test_ratio = 0.66,
+    input_length = 2*24*60/15,
+    output_length = 1,
+):
+    '''
+    This function produces train and test dataframes that can be used with the model. The source of data is the cleaned .csv with
+    historical data between April and September 2022.
+    ---
+    Inputs : 
+        n_sequences : 
+        step :
+        fold_length :
+        fold_stride :
+        train_test_ratio :
+        input_length :
+        output_length:
+    ---
+    Outputs : X_train, y_train, X_test, y_test
+        X_train :
+        y_train :
+        X_test :
+        y_test : 
+    '''
+
+    ### 1. Obtaining data ###
+    step_str = f'{step}min'
     bikes_df = cleaning.get_clean_bikes_dataframe()
     bikes_df = bikes_df.sort_values(by="time")
     bikes_df['time']=pd.to_datetime(bikes_df['time'])
-    bikes_df = bikes_df.resample(step, on='time').mean().reset_index()
+    bikes_df = bikes_df.resample(step_str, on='time').mean().reset_index()
 
+    ### 2. Creating folds ###
 
+    bikes_folds = get_folds(bikes_df, fold_length, fold_stride)
+    n_folds = int((bikes_df.shape[0]-fold_length)/fold_stride)
+
+    ### 3. Selecting a random fold and producing train and test sets ###
+    fold_number = np.random.randint(0,n_folds-1)
+    bikes_fold = bikes_folds[fold_number]
+    (bikes_fold_train, bikes_fold_test) = train_test_split(bikes_fold, train_test_ratio, input_length)
+
+    ### 4. Producing a list of random sequences in the data ###
+    n_train = int(n_sequences * train_test_ratio)
+    n_test = int(n_sequences*(1-train_test_ratio))
+    X_train_bikes, y_train_bikes = get_X_y(bikes_fold_train, n_train, input_length, output_length)
+    X_test_bikes, y_test_bikes = get_X_y(bikes_fold_test, n_test, input_length, output_length)
+    return X_train_bikes,y_train_bikes,X_test_bikes,y_test_bikes
+
+# X_train_bikes, y_train_bikes, X_test_bikes, y_test_bikes = train_test_split()
 
 def init_model(X_train, y_train):
     
@@ -259,7 +290,6 @@ def init_model(X_train, y_train):
     return model
 
 # model = init_model(X_train_bikes, y_train_bikes)
-# model.summary()
 
 def plot_history(history):
     
@@ -287,13 +317,10 @@ def plot_history(history):
                         
     return ax
 
-
-
 def fit_model(model,X,y):
     es = EarlyStopping(patience=3,restore_best_weights = True)
     history = model.fit(X,y,epochs = 50,callbacks=es,batch_size=128,validation_split=0.2)
     return(model,history)
-
 
 # model = init_model(X_train_bikes,y_train_bikes)
 # model,history = fit_model(model,X_train_bikes,y_train_bikes)
@@ -301,8 +328,12 @@ def fit_model(model,X,y):
 # res =model.evaluate(X_test_bikes,y_test_bikes)
 # y_pred_bikes = model.predict(X_test_bikes)
 
+#### Dummy models for implementation purposes: ####
 
 def init_baseline():
+    '''
+    Dummy model with a prediction that matches the last seen datapoint. It returns a numpy array of format (number of sequences,1,number_of_stations)
+    '''
     baseline = models.Sequential()
     baseline.add(Lambda(lambda x:x[:,-1:,:]))
 
@@ -312,11 +343,27 @@ def init_baseline():
         metrics ='mae')
     return baseline
 
-
-def init_random():
+def init_random(max_step : int):
+    '''
+    Dummy model that returns a prediction which is the status at a random number of steps within the range (1 - max_step) before the target.
+    '''
     baseline = models.Sequential()
-    random_index = np.random.randint(1,12,)
-    baseline.add(Lambda(lambda x:x[:,-1:,:]))
+    random_index = np.random.randint(1,max_step)
+    baseline.add(Lambda(lambda x:x[:,-(random_index+1):-random_index,:]))
+
+    baseline.compile(
+        loss='mse',
+        optimizer='rmsprop',
+        metrics ='mae')
+    return baseline
+
+def init_random_live_status(random_range : int):
+    '''
+    Dummy model to be used with the live status report of the velov stations. It returns a random number of bikes for each station based on the 
+    live status plus or minus a random int within the random_range
+    '''    
+    baseline = models.Sequential()
+    baseline.add(Lambda(lambda x:x[:,-1:,:]+np.random.randint(-random_range,random_range)))
 
     baseline.compile(
         loss='mse',
