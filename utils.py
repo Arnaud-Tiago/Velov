@@ -123,7 +123,7 @@ def get_all_data(source = 'local',save_csv = False) -> list:
     station_info = get_stations_info(source = source,save_csv = False)
     return [get_station(number,source,save_csv) for number in station_info.station_number]
 
-def get_last_week_station(number) -> pd.DataFrame:
+def get_last_week_station(number, nb_days:int=7) -> pd.DataFrame:
     '''
     This function returns a DataFrame containing the last seven days of data for the station identified by 'number'. The DataFrame contains:
     index : 5-minutes timestamps
@@ -131,7 +131,7 @@ def get_last_week_station(number) -> pd.DataFrame:
     bike_stands : total number of available bike stands at a given timestamp in the station
     '''
     today = (str(dt.today())[:-7] + 'Z').replace(' ','T')
-    previous = (str(dt.today() - timedelta(days=10))[:-7] + 'Z').replace(' ','T')
+    previous = (str(dt.today() - timedelta(nb_days+1))[:-nb_days] + 'Z').replace(' ','T')
     url = f'https://download.data.grandlyon.com/sos/velov?request=GetObservation&service=SOS&version=1.0.0&offering=reseau_velov&procedure=velov-{number}&observedProperty=bikes,bike-stands&eventTime={previous}/{today}&responseFormat=application/json'
     response = requests.get(url)
     df = pd.DataFrame(response.json()['ObservationCollection']['member'][0]['result']['DataArray']['values'],columns=['time','bikes','bike_stands'])
