@@ -5,6 +5,7 @@ import seaborn as sns
 import datetime
 
 from utils import get_station, get_stations_info
+from data import load_data
 
 
 root_path = '~/.velov/data/'
@@ -152,11 +153,11 @@ def get_clean_dataframes() -> pd.DataFrame:
     return bikes_df.fillna(method='ffill').fillna(method = 'backfill'),stands_df.fillna(method='ffill').fillna(method = 'backfill')
 """
 
-def get_clean_bikes_dataframe() -> pd.DataFrame:
+def get_clean_bikes_dataframe(source = 'local') -> pd.DataFrame:
     '''
     returns the cleaned_bike_dataframe
     '''
-    data = pd.read_csv(cleaned_data_path+'all_stations_hist.csv')
+    data = load_data('all_stations_hist',clean=True,provenance=source)
     first_station = data.station_number.unique()[0]
     df = data[data['station_number']==first_station]
     bikes_df = df[['time','bikes']].rename(columns = {'bikes':f'station_{first_station}'})
@@ -166,11 +167,11 @@ def get_clean_bikes_dataframe() -> pd.DataFrame:
         bikes_df = bikes_df.merge(temp_bikes_df,on='time',how='outer')
     return bikes_df.fillna(method='ffill').fillna(method = 'backfill')
 
-def get_clean_stands_dataframe() -> pd.DataFrame:
+def get_clean_stands_dataframe(source = 'local') -> pd.DataFrame:
     '''
     returns the cleaned_stands_dataframe
     '''
-    data = pd.read_csv(cleaned_data_path+'all_stations_hist.csv')
+    data = load_data('all_stations_hist',clean=True,provenance=source)
     first_station = data.station_number.unique()[0]
     df = data[data['station_number']==first_station]
     stands_df = df[['time','stands']].rename(columns = {'stands':f'station_{first_station}'})
