@@ -1,7 +1,19 @@
 import pandas as pd
+import numpy as np
+
+import matplotlib.pyplot as plt
+
 from datetime import timedelta
 from sklearn.metrics import  accuracy_score,mean_squared_error,recall_score,f1_score,precision_score
 from velov import utils
+from velov import cleaning
+
+
+from tensorflow.keras import models, layers, optimizers, metrics
+from tensorflow.keras.layers import Lambda
+
+from tensorflow.keras.layers.experimental.preprocessing import Normalization
+from tensorflow.keras.callbacks import EarlyStopping
 
 station_info = utils.get_stations_info()
 last_week_available_stations = [u'velov-10001', u'velov-10002', u'velov-10004', u'velov-10005', u'velov-10006', u'velov-10007',
@@ -45,7 +57,7 @@ u'velov-8059', u'velov-8060', u'velov-8061', u'velov-9002', u'velov-9003', u'vel
 u'velov-9011', u'velov-9013', u'velov-9014', u'velov-9020', u'velov-9022', u'velov-9029', u'velov-9032', u'velov-9033', u'velov-9040',
 u'velov-9041', u'velov-9042', u'velov-9043', u'velov-9044', u'velov-9049', u'velov-9050', u'velov-9051', u'velov-9052']
 
-
+#### These functions are used to classify stations based on the number of available bikes and bike stands ####
 
 def classify(bikes : int,bike_stands : int, capacity : int,tolerance_level = 0.1) -> int:
     '''
@@ -77,6 +89,8 @@ def classify_station(station_data : pd.DataFrame) -> pd.DataFrame:
     
     return classified_station_data
 
+
+#### This part is dedicated to evaluating a baseline model on historical data ####
 
 def predict(station_data : pd.DataFrame,n_min = 15,n_days = 7) -> pd.DataFrame:
     '''
@@ -111,4 +125,244 @@ def compute_metrics(classified_station_data,n_days = 7):
     result=pd.DataFrame(index=['step','mse','precision_empty','precision_full','accuracy'],data=[step,mse,precision_empty,precision_full,accuracy]).transpose()
        
     return result
+
+
+def get_folds(
+    df: pd.DataFrame,
+    fold_length: int,
+    fold_stride: int) -> list[pd.DataFrame]:
+    '''
+    This function slides through the Time Series dataframe of shape (n_timesteps, n_features) to create folds
+    - of equal `fold_length`
+    - using `fold_stride` between each fold
     
+    Returns a list of folds, each as a DataFrame
+    '''
+    folds = []
+    n_timesteps = df.shape[0]
+    n_folds = int((n_timesteps-fold_length)/fold_stride)
+    print(f'There are {n_folds} folds.')
+    for i in range(n_folds+1):
+        folds.append(df.iloc[i*fold_stride:i*(fold_stride)+fold_length])
+    return folds
+
+
+def train_test_split_fold(fold:pd.DataFrame,
+                     train_test_ratio: float,
+                     input_length: int) -> tuple[pd.DataFrame]:
+    '''
+    Returns a train dataframe and a test dataframe (fold_train, fold_test)
+    from which one can sample (X,y) sequences.
+    df_train should contain all the timesteps until round(train_test_ratio * len(fold))   
+    '''
+    print(f'The train split contains {round(train_test_ratio*len(fold))} observations and the test split {round((1-train_test_ratio)*len(fold))} observations.')
+    fold_train = fold.iloc[0 : round(train_test_ratio * len(fold))]
+    fold_test = fold.iloc[round(train_test_ratio*len(fold))-input_length:]
+    return (fold_train,fold_test)
+
+
+def get_Xi_yi(
+    fold:pd.DataFrame, 
+    input_length:int, 
+    output_length:int):
+    '''
+    - given a fold, it returns one sequence (X_i, y_i)
+    - with the starting point of the sequence being chosen at random
+    '''
+    # $CHALLENGIFY_BEGIN
+    first_possible_start = 0
+    last_possible_start = len(fold) - (input_length + output_length) + 1
+    random_start = np.random.randint(first_possible_start, last_possible_start)
+    X_i = fold.iloc[random_start:random_start+input_length].drop(columns = 'time')   
+    y_i = fold.iloc[random_start+input_length:
+                  random_start+input_length+output_length].drop(columns='time')
+    
+    return (X_i, y_i)
+
+def get_X_y(
+    fold:pd.DataFrame,
+    number_of_sequences:int,
+    input_length:int,
+    output_length:int):
+    '''
+    - given a fold, it returns a list of sequences (X_i,y_i)
+    - with the starting point of the sequence being chosen at random
+    '''
+    X = []
+    y=[]
+    for i in range(number_of_sequences):
+        (X_i,y_i)= get_Xi_yi(fold, input_length,output_length)
+        X.append(X_i)
+        y.append(y_i)
+    return(np.array(X),np.array(y))
+
+
+def train_test_split(
+    n_sequences = 100,
+    step = 15,
+    fold_length = int(24*60/15 * 90),
+    fold_stride = int(24*60*7/15),
+    train_test_ratio = 0.66,
+    input_length = 2*24*60/15,
+    output_length = 1,
+):
+    '''
+    This function produces train and test dataframes that can be used with the model. The source of data is the cleaned .csv with
+    historical data between April and September 2022.
+    ---
+    Inputs : 
+        n_sequences : 
+        step :
+        fold_length :
+        fold_stride :
+        train_test_ratio :
+        input_length :
+        output_length:
+    ---
+    Outputs : X_train, y_train, X_test, y_test
+        X_train :
+        y_train :
+        X_test :
+        y_test : 
+    '''
+
+    ### 1. Obtaining data ###
+    step_str = f'{step}min'
+    bikes_df = cleaning.get_clean_bikes_dataframe()
+    bikes_df = bikes_df.sort_values(by="time")
+    bikes_df['time']=pd.to_datetime(bikes_df['time'])
+    bikes_df = bikes_df.resample(step_str, on='time').mean().reset_index()
+
+    ### 2. Creating folds ###
+
+    bikes_folds = get_folds(bikes_df, fold_length, fold_stride)
+    n_folds = int((bikes_df.shape[0]-fold_length)/fold_stride)
+
+    ### 3. Selecting a random fold and producing train and test sets ###
+    fold_number = np.random.randint(0,n_folds-1)
+    bikes_fold = bikes_folds[fold_number]
+    (bikes_fold_train, bikes_fold_test) = train_test_split(bikes_fold, train_test_ratio, input_length)
+
+    ### 4. Producing a list of random sequences in the data ###
+    n_train = int(n_sequences * train_test_ratio)
+    n_test = int(n_sequences*(1-train_test_ratio))
+    X_train_bikes, y_train_bikes = get_X_y(bikes_fold_train, n_train, input_length, output_length)
+    X_test_bikes, y_test_bikes = get_X_y(bikes_fold_test, n_test, input_length, output_length)
+    return X_train_bikes,y_train_bikes,X_test_bikes,y_test_bikes
+
+
+def full_data_process(
+    n_sequences : int, # number of random sequences that will be created
+    step = 15 : int, # number of minutes in a timestamp (default=15 min)
+    ):
+    bikes_df = cleaning.get_clean_bikes_dataframe()
+    bikes_df = bikes_df.sort_values(by="time")
+    bikes_df['time']=pd.to_datetime(bikes_df['time'])
+    bikes_df = bikes_df.resample(step, on='time').mean().reset_index()
+
+
+def init_model(X_train, y_train):
+    
+    # 0 - Normalization
+    # ======================    
+    normalizer = Normalization()
+    normalizer.adapt(X_train)
+    
+    # 1 - RNN architecture
+    # ======================    
+    model = models.Sequential()
+    ## 1.0 - All the rows will be standardized through the already adapted normalization layer
+    model.add(normalizer)
+    ## 1.1 - Recurrent Layer
+    model.add(layers.LSTM(10, 
+                          activation='tanh', 
+                          return_sequences = True,
+                          recurrent_dropout = 0.3,
+                          input_shape=(48,430)))
+    model.add(layers.LSTM(10, 
+                          activation='tanh', 
+                          return_sequences = False,
+                          recurrent_dropout = 0.3,))
+    
+    ## 1.2 - Predictive Dense Layers
+    output_length = y_train.shape[2]
+    model.add(layers.Dense(100, activation='relu'))
+    model.add(layers.Dense(output_length, activation='linear'))
+
+    # 2 - Compiler
+    # ======================    
+    adam = optimizers.Adam(learning_rate=0.02)    
+    model.compile(loss='mse', optimizer=adam, metrics=["mae"])
+    
+    return model
+
+
+def plot_history(history):
+    
+    fig, ax = plt.subplots(1,2, figsize=(20,7))
+    # --- LOSS: MSE --- 
+    ax[0].plot(history.history['loss'])
+    ax[0].plot(history.history['val_loss'])
+    ax[0].set_title('MSE')
+    ax[0].set_ylabel('Loss')
+    ax[0].set_xlabel('Epoch')
+    ax[0].legend(['Train', 'Validation'], loc='best')
+    ax[0].grid(axis="x",linewidth=0.5)
+    ax[0].grid(axis="y",linewidth=0.5)
+    
+    # --- METRICS:MAE ---
+    
+    ax[1].plot(history.history['mae'])
+    ax[1].plot(history.history['val_mae'])
+    ax[1].set_title('MAE')
+    ax[1].set_ylabel('MAE')
+    ax[1].set_xlabel('Epoch')
+    ax[1].legend(['Train', 'Validation'], loc='best')
+    ax[1].grid(axis="x",linewidth=0.5)
+    ax[1].grid(axis="y",linewidth=0.5)
+                        
+    return ax
+
+def fit_model(model,X,y):
+    es = EarlyStopping(patience=3,restore_best_weights = True)
+    history = model.fit(X,y,epochs = 50,callbacks=es,batch_size=128,validation_split=0.2)
+    return(model,history)
+
+
+def init_baseline():
+
+    baseline = models.Sequential()
+    baseline.add(Lambda(lambda x:x[:,-1:,:]))
+
+    baseline.compile(
+        loss='mse',
+        optimizer='rmsprop',
+        metrics ='mae')
+    return baseline
+
+
+def init_random(max_step : int):
+    '''
+    Dummy model that returns a prediction which is the status at a random number of steps within the range (1 - max_step) before the target.
+    '''
+    baseline = models.Sequential()
+    random_index = np.random.randint(1,max_step)
+    baseline.add(Lambda(lambda x:x[:,-(random_index+1):-random_index,:]))
+
+    baseline.compile(
+        loss='mse',
+        optimizer='rmsprop',
+        metrics ='mae')
+    return baseline
+
+def init_random_live_status(random_range : int):
+    '''
+    Dummy model to be used with the live status report of the velov stations. It returns a random number of bikes for each station based on the 
+    live status plus or minus a random int within the random_range
+    '''    
+    baseline = models.Sequential()
+    baseline.add(Lambda(lambda x:x[:,-1:,:]+np.random.randint(-random_range,random_range)))
+
+
+
+
