@@ -1,13 +1,17 @@
 import pandas as pd
 import numpy as np
+
 import matplotlib.pyplot as plt
+
 from datetime import timedelta
 from sklearn.metrics import  accuracy_score,mean_squared_error,recall_score,f1_score,precision_score
 from velov import utils
 from velov import cleaning
 
+
 from tensorflow.keras import models, layers, optimizers, metrics
 from tensorflow.keras.layers import Lambda
+
 from tensorflow.keras.layers.experimental.preprocessing import Normalization
 from tensorflow.keras.callbacks import EarlyStopping
 
@@ -122,7 +126,6 @@ def compute_metrics(classified_station_data,n_days = 7):
        
     return result
 
-#### This part is dedicated to creating a RNN model ####
 
 def get_folds(
     df: pd.DataFrame,
@@ -143,6 +146,7 @@ def get_folds(
         folds.append(df.iloc[i*fold_stride:i*(fold_stride)+fold_length])
     return folds
 
+
 def train_test_split_fold(fold:pd.DataFrame,
                      train_test_ratio: float,
                      input_length: int) -> tuple[pd.DataFrame]:
@@ -155,6 +159,7 @@ def train_test_split_fold(fold:pd.DataFrame,
     fold_train = fold.iloc[0 : round(train_test_ratio * len(fold))]
     fold_test = fold.iloc[round(train_test_ratio*len(fold))-input_length:]
     return (fold_train,fold_test)
+
 
 def get_Xi_yi(
     fold:pd.DataFrame, 
@@ -191,14 +196,6 @@ def get_X_y(
         y.append(y_i)
     return(np.array(X),np.array(y))
 
-# FOLD_LENGTH = int(24*60/15 * 90) # 1 month  
-# FOLD_STRIDE = int(24*60*7/15) # 1 week 
-# TRAIN_TEST_RATIO = 0.66
-# INPUT_LENGTH = int(0.5*24*60/15)  # 1/2 day
-# OUTPUT_LENGTH = 1
-# SEQUENCE_STRIDE = 1
-# N_TRAIN = 6666 # number_of_sequences_train
-# N_TEST =  3333 # number_of_sequences_test
 
 def train_test_split(
     n_sequences = 100,
@@ -253,7 +250,16 @@ def train_test_split(
     X_test_bikes, y_test_bikes = get_X_y(bikes_fold_test, n_test, input_length, output_length)
     return X_train_bikes,y_train_bikes,X_test_bikes,y_test_bikes
 
-# X_train_bikes, y_train_bikes, X_test_bikes, y_test_bikes = train_test_split()
+
+def full_data_process(
+    n_sequences : int, # number of random sequences that will be created
+    step = 15 : int, # number of minutes in a timestamp (default=15 min)
+    ):
+    bikes_df = cleaning.get_clean_bikes_dataframe()
+    bikes_df = bikes_df.sort_values(by="time")
+    bikes_df['time']=pd.to_datetime(bikes_df['time'])
+    bikes_df = bikes_df.resample(step, on='time').mean().reset_index()
+
 
 def init_model(X_train, y_train):
     
@@ -290,7 +296,6 @@ def init_model(X_train, y_train):
     
     return model
 
-# model = init_model(X_train_bikes, y_train_bikes)
 
 def plot_history(history):
     
@@ -323,18 +328,9 @@ def fit_model(model,X,y):
     history = model.fit(X,y,epochs = 50,callbacks=es,batch_size=128,validation_split=0.2)
     return(model,history)
 
-# model = init_model(X_train_bikes,y_train_bikes)
-# model,history = fit_model(model,X_train_bikes,y_train_bikes)
-# plot_history(history)
-# res =model.evaluate(X_test_bikes,y_test_bikes)
-# y_pred_bikes = model.predict(X_test_bikes)
-
-#### Dummy models for implementation purposes: ####
 
 def init_baseline():
-    '''
-    Dummy model with a prediction that matches the last seen datapoint. It returns a numpy array of format (number of sequences,1,number_of_stations)
-    '''
+
     baseline = models.Sequential()
     baseline.add(Lambda(lambda x:x[:,-1:,:]))
 
@@ -343,6 +339,7 @@ def init_baseline():
         optimizer='rmsprop',
         metrics ='mae')
     return baseline
+
 
 def init_random(max_step : int):
     '''
@@ -366,15 +363,6 @@ def init_random_live_status(random_range : int):
     baseline = models.Sequential()
     baseline.add(Lambda(lambda x:x[:,-1:,:]+np.random.randint(-random_range,random_range)))
 
-    baseline.compile(
-        loss='mse',
-        optimizer='rmsprop',
-        metrics ='mae')
-    return baseline
 
 
-# baseline_model = init_baseline()
-# baseline_score = baseline_model.evaluate(X_test_bikes, y_test_bikes)
-# print(f"- The Baseline MAE on the test set is equal to {round(baseline_score[1],2)}")
-# y_base = baseline_model.predict(X_test_bikes)
 
