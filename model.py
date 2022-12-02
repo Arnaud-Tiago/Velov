@@ -6,7 +6,8 @@ from sklearn.metrics import  accuracy_score,mean_squared_error,recall_score,f1_s
 from velov import utils
 from velov import cleaning
 
-from tensorflow.keras import models, layers, optimizers, metrics, Lambda
+from tensorflow.keras import models, layers, optimizers, metrics
+from tensorflow.keras.layers import Lambda
 from tensorflow.keras.layers.experimental.preprocessing import Normalization
 from tensorflow.keras.callbacks import EarlyStopping
 
@@ -372,8 +373,8 @@ def init_random_live_status(random_range : int):
     return baseline
 
 
-baseline_model = init_baseline()
-baseline_score = baseline_model.evaluate(X_test_bikes, y_test_bikes)
-print(f"- The Baseline MAE on the test set is equal to {round(baseline_score[1],2)}")
-y_base = baseline_model.predict(X_test_bikes)
+# baseline_model = init_baseline()
+# baseline_score = baseline_model.evaluate(X_test_bikes, y_test_bikes)
+# print(f"- The Baseline MAE on the test set is equal to {round(baseline_score[1],2)}")
+# y_base = baseline_model.predict(X_test_bikes)
 
