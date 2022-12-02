@@ -8,9 +8,11 @@ import seaborn as sns
 import requests
 from datetime import timedelta
 
-root_path = '~/.velov/data/'
-raw_data_path = '~/.velov/data/raw/'
-cleaned_data_path = '~/.velov/data/cleaned/'
+from params import LOCAL_DATA_PATH_CLEAN, LOCAL_DATA_PATH_RAW, LOCAL_ROOT_PATH
+
+root_path = LOCAL_ROOT_PATH
+raw_data_path = LOCAL_DATA_PATH_RAW
+cleaned_data_path = LOCAL_DATA_PATH_CLEAN
 
 def get_stations_info(source = 'local',save_csv = False) -> pd.DataFrame:
     '''
