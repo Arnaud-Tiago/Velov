@@ -17,7 +17,9 @@ def clean_station(number:int, start_date:datetime.date='2000-01-01', step:int=5,
     ---
     returns : a data frame with data every 5 minutes 
     """
-        
+
+    step_str = f'{step}min'    
+
     df = get_station(number, start_date)
     if 'mechanical_bikes' in df.columns and 'electrical_bikes' in df.columns:
         df['bikes']=df['mechanical_bikes'] + df['electrical_bikes']
