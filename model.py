@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 
 from datetime import timedelta
 from sklearn.metrics import  accuracy_score,mean_squared_error,recall_score,f1_score,precision_score
-from velov import utils
-from velov import cleaning
+import utils
+import cleaning
 
 
 from tensorflow.keras import models, layers, optimizers, metrics
@@ -14,6 +14,15 @@ from tensorflow.keras.layers import Lambda
 
 from tensorflow.keras.layers.experimental.preprocessing import Normalization
 from tensorflow.keras.callbacks import EarlyStopping
+
+FOLD_LENGTH = int(24 * 12 * 31) # 24 hours per day, 12 stamps per hour, 31 days    
+FOLD_STRIDE = int(24 * 12 * 7) # 1 week
+TRAIN_TEST_RATIO = 0.66
+INPUT_LENGTH = int(24*12*14) # 24 hours per day, 12 stamps per hour, 14 days
+OUTPUT_LENGTH = 12
+SEQUENCE_STRIDE = 1
+N_TRAIN = 1 # number_of_sequences_train
+N_TEST =  1 # number_of_sequences_test
 
 station_info = utils.get_stations_info()
 last_week_available_stations = [u'velov-10001', u'velov-10002', u'velov-10004', u'velov-10005', u'velov-10006', u'velov-10007',
@@ -252,8 +261,8 @@ def train_test_split(
 
 
 def full_data_process(
-    n_sequences : int, # number of random sequences that will be created
-    step = 15 : int, # number of minutes in a timestamp (default=15 min)
+    n_sequences: int, # number of random sequences that will be created
+    step: int = 15  # number of minutes in a timestamp (default=15 min)
     ):
     bikes_df = cleaning.get_clean_bikes_dataframe()
     bikes_df = bikes_df.sort_values(by="time")
@@ -362,7 +371,3 @@ def init_random_live_status(random_range : int):
     '''    
     baseline = models.Sequential()
     baseline.add(Lambda(lambda x:x[:,-1:,:]+np.random.randint(-random_range,random_range)))
-
-
-
-
