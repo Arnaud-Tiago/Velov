@@ -32,3 +32,6 @@ run_all: run_preprocess run_train run_pred run_evaluate
 
 # legacy directive
 run_model: run_all
+
+run_api:
+	uvicorn fast:app --reload
