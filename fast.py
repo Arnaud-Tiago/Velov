@@ -19,20 +19,23 @@ app.add_middleware(
 @app.get("/predict")
 def prediction():
     print("first")
-#load X_input from bucket
+    #load X_input from bucket
     X_pred=get_live_status() #pd.DataFrame live df
-#load model. if it is on docker load .load()
+    #load model. if it is on docker load .load()
     print("cool")
     #model=pickle.load(open("dummy_random_model.pkl","rb"))
-    model=joblib.load("dummy_random_model",mmap_mode="r")
+    model=joblib.load("dummy_random_model.keras",mmap_mode="r")
     #model = pickle.load(open("dummy_random_model.pkl", 'rb'))
     #model = pickle.load("dummy_random_model.pkl")
     print("second")
-# use model.predict(X_input)
+    # use model.predict(X_input)
     y_pred=model.predict(X_pred["bikes"])
     output=X_pred[["station_number"]]
     output["bikes"]=y_pred
-    return output
+    # print(float(output))
+    one_station_pred = output['bikes'][0]
+    #return {'pred': 'nothing'}
+    return {'pred': float(one_station_pred)}
 
 
 @app.get("/")
