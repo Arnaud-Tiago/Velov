@@ -378,3 +378,36 @@ def init_random_live_status(random_range : int):
         optimizer='rmsprop',
         metrics ='mae')
     return baseline
+
+
+class MinMaxNormalization():
+    '''MinMax Normalization --> [0, 1]
+       x = (x - min) / (max - min).
+    '''
+    def __init__(self):
+        pass
+    def fit(self, X):
+        mins = []
+        maxs = []
+        for i in range (X.shape[2]):
+            x_v = X[:,:,i]
+            mins.append(x_v.min())
+            maxs.append(x_v.max())
+        self._mins = mins
+        self._maxs = maxs
+        # print("min:", self._min, "max:", self._max)
+    def transform(self, X):
+        for i in range (X.shape[2]):
+            if not self._maxs[i] == self._mins[i]:
+                X[:,:,i] = (X[:,:,i] - np.ones(shape=(X.shape[0],X.shape[1])) * self._mins[i]) / (self._maxs[i] - self._mins[i])
+            else :
+                X[:,:,i] = (X[:,:,i] - np.ones(shape=(X.shape[0],X.shape[1])) * self._mins[i])
+        return X
+    def fit_transform(self, X):
+        self.fit(X)
+        return self.transform(X)
+    def inverse_transform(self, X):
+        # X = (X + 1.) / 2.
+        for i in range (X.shape[2]):
+            X[:,:,i] = X[:,:,i] * (self._maxs[i] - self._mins[i]) + self._mins[i]
+        return X
