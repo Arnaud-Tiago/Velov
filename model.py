@@ -371,3 +371,5 @@ def init_random_live_status(random_range : int):
     '''    
     baseline = models.Sequential()
     baseline.add(Lambda(lambda x:x[:,-1:,:]+np.random.randint(-random_range,random_range)))
+
+
