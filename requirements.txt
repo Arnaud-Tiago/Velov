@@ -2,7 +2,7 @@
 #All pack are managed by setup.py
 pandas
 numpy
-tensorflow
+#tensorflow
 scikit-learn
 matplotlib
 seaborn
@@ -16,3 +16,5 @@ scikit-learn
 streamlit
 fsspec
 gcsfs
+fastapi
+uvicorn
