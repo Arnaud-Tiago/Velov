@@ -149,9 +149,9 @@ def get_folds(
     '''
     folds = []
     n_timesteps = df.shape[0]
-    n_folds = int((n_timesteps-fold_length)/fold_stride)
+    n_folds = int((n_timesteps-fold_length)/fold_stride) + 1
     print(f'There are {n_folds} folds.')
-    for i in range(n_folds+1):
+    for i in range(n_folds):
         folds.append(df.iloc[i*fold_stride:i*(fold_stride)+fold_length])
     return folds
 
@@ -182,10 +182,14 @@ def get_Xi_yi(
     first_possible_start = 0
     last_possible_start = len(fold) - (input_length + output_length) + 1
     random_start = np.random.randint(first_possible_start, last_possible_start)
-    X_i = fold.iloc[random_start:random_start+input_length].drop(columns = 'time')
-    y_i = fold.iloc[random_start+input_length:
-                  random_start+input_length+output_length].drop(columns='time')
-
+    if 'time' in fold.columns :
+        X_i = fold.iloc[random_start:random_start+input_length].drop(columns = 'time')
+        y_i = fold.iloc[random_start+input_length:
+                    random_start+input_length+output_length].drop(columns='time')
+    else :
+        X_i = fold.iloc[random_start:random_start+input_length]
+        y_i = fold.iloc[random_start+input_length:
+                    random_start+input_length+output_length]
     return (X_i, y_i)
 
 def get_X_y(
