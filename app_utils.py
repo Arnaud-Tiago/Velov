@@ -1,16 +1,64 @@
 import pandas as pd
 import pydeck as pdk
+import requests
 
-def create_scatter_layer(data, color):
+def create_scatter_layer(data, color, radius):
     '''
     Takes a DataFrame with 'lng' and 'lat' columns
-    Create a scatter layer
+    Create a ScatterLayer as a pdk.Layer object
     '''
     return pdk.Layer('ScatterplotLayer',
                      data=data,
                      get_position=['lng', 'lat'],
-                     get_radius=50,
+                     get_radius=radius,
+                     size_scale=15,
                      get_fill_color=color)
+
+def create_text_layer(data,color,size):
+    '''
+    Takes a DataFrame with 'lng', 'lat' and 'text_to_display' columns
+    Create a TextLayer as a pdk.Layer object
+    '''
+    return pdk.Layer("TextLayer",
+                           data=data,
+                           pickable=True,
+                           get_position=["lng", "lat"],
+                           get_text='text_to_display',
+                           get_color=color,
+                           billboard=False,
+                           get_size=size,
+                           sizeUnits='meters',
+                           get_angle=0,
+                           get_text_anchor='"middle"',
+                           get_alignment_baseline="'center'")
+
+def create_pin_layer(lat, lon, size):
+    '''
+    Takes latitude, longitude and size
+    Returns an IconLayer as a pdk.Layer object
+    '''
+    ICON_URL = "https://upload.wikimedia.org/wikipedia/commons/f/fb/Map_pin_icon_green.svg"
+
+    icon_data = {
+        # Icon from Wikimedia, used the Creative Commons Attribution-Share Alike 3.0
+        # Unported, 2.5 Generic, 2.0 Generic and 1.0 Generic licenses
+        "url": ICON_URL,
+        "width": 94,
+        "height": 128,
+        "anchorY": 242,
+    }
+
+    icon_layer = pdk.Layer(
+        type="IconLayer",
+        data=pd.DataFrame([lat, lon, icon_data],
+                          index=['lat', 'lon', 'icon_data']).transpose(),
+        get_icon="icon_data",
+        get_size=size,
+        size_scale=15,
+        get_position=["lon", "lat"],
+        pickable=True,
+    )
+    return icon_layer
 
 
 def classify(bikes: int,
@@ -65,3 +113,14 @@ def classify_station(station_data: pd.DataFrame) -> pd.DataFrame:
         })
 
     return classified_station_data
+
+
+def geocode(address):
+    '''
+    Takes an address. Return address attributesas a dictionary.
+    Keys are including "display_name", "lat" and "lon"
+    '''
+    params_geo = {"q": address, 'format': 'json'}
+    places = requests.get(f"https://nominatim.openstreetmap.org/search",
+                          params=params_geo).json()
+    return places[0]
