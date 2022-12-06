@@ -28,13 +28,18 @@ STATUS_COLOURS = {
     'full': 'Dark blue'
 }
 
-# Default values for map show
-lat = 45.7640
-lon = 4.8357
-zoom = 13
+DEFAULT_LAT = 45.7640
+DEFAULT_LON = 4.8357
+DEFAULT_ZOOM = 13
+DEFAULT_CIRCLE_RADIUS = 50
+DEFAULT_TEXT_SIZE = 30
 
-radius = 50
-size = 30
+# Default values for map show
+lat = DEFAULT_LAT
+lon = DEFAULT_LON
+zoom = DEFAULT_ZOOM
+radius = DEFAULT_CIRCLE_RADIUS
+size = DEFAULT_TEXT_SIZE
 
 MODEL_API_URL = "https://velovdock-w4chmhalca-ew.a.run.app/predict"
 
@@ -140,9 +145,9 @@ text_layer = pdk.Layer("TextLayer",
 
 layers.append(text_layer)
 
-#if address:
-icon_layer = create_pin_layer(lat=lat,lon=lon,size=4)
-layers.append(icon_layer)
+if lat != DEFAULT_LAT and lon != DEFAULT_LON :
+    icon_layer = create_pin_layer(lat=lat,lon=lon,size=4)
+    layers.append(icon_layer)
 
 ## Plotting the map
 
