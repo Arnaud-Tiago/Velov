@@ -5,7 +5,7 @@ import requests
 def create_scatter_layer(data, color, radius):
     '''
     Takes a DataFrame with 'lng' and 'lat' columns
-    Create a scatter layer
+    Create a ScatterLayer as a pdk.Layer object
     '''
     return pdk.Layer('ScatterplotLayer',
                      data=data,
@@ -14,8 +14,29 @@ def create_scatter_layer(data, color, radius):
                      size_scale=15,
                      get_fill_color=color)
 
+def create_text_layer(data,color,size):
+    '''
+    Takes a DataFrame with 'lng', 'lat' and 'text_to_display' columns
+    Create a TextLayer as a pdk.Layer object
+    '''
+    return pdk.Layer("TextLayer",
+                           data=data,
+                           pickable=True,
+                           get_position=["lng", "lat"],
+                           get_text='text_to_display',
+                           get_color=color,
+                           billboard=False,
+                           get_size=size,
+                           sizeUnits='meters',
+                           get_angle=0,
+                           get_text_anchor='"middle"',
+                           get_alignment_baseline="'center'")
 
 def create_pin_layer(lat, lon, size):
+    '''
+    Takes latitude, longitude and size
+    Returns an IconLayer as a pdk.Layer object
+    '''
     ICON_URL = "https://upload.wikimedia.org/wikipedia/commons/f/fb/Map_pin_icon_green.svg"
 
     icon_data = {
@@ -95,8 +116,11 @@ def classify_station(station_data: pd.DataFrame) -> pd.DataFrame:
 
 
 def geocode(address):
+    '''
+    Takes an address. Return address attributesas a dictionary.
+    Keys are including "display_name", "lat" and "lon"
+    '''
     params_geo = {"q": address, 'format': 'json'}
     places = requests.get(f"https://nominatim.openstreetmap.org/search",
                           params=params_geo).json()
     return places[0]
-    #return float(places[0]['lat']), float(places[0]['lon'])

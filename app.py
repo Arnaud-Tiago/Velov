@@ -4,8 +4,7 @@ import pandas as pd
 import pydeck as pdk
 
 from utils import get_stations_info, get_live_status
-from app_utils import get_sub_dataframe_from_status, create_scatter_layer, classify_station,geocode,create_pin_layer
-
+import app_utils
 import requests
 
 COLOURS = {
@@ -30,7 +29,7 @@ STATUS_COLOURS = {
 
 DEFAULT_LAT = 45.7640
 DEFAULT_LON = 4.8357
-DEFAULT_ZOOM = 13
+DEFAULT_ZOOM = 13.5
 DEFAULT_CIRCLE_RADIUS = 50
 DEFAULT_TEXT_SIZE = 30
 
@@ -47,33 +46,34 @@ MODEL_API_URL = "https://velovdock-w4chmhalca-ew.a.run.app/predict"
 
 st.title('Le Wagon Demo Day - Batch #1033')
 
-st.header('Welcome to the Velo\'V prediction app')
+st.header(':woman-biking: Welcome to the Velo\'V prediction app :man-biking:')
 
 st.caption('''
            Cycling for 20 minutes and having the unpleasant surprise of finding the destination station full on arrival, when it was empty 20 minutes earlier...
-           \n Velo'V users experience this regularly. Le Wagon Lyon designed a solution for you. Based on usage history, you can now have access to a station status prediction using 5-minute increments and up to 1 hour.
+           \n Velo'V users experience this regularly.
+           \n
+           \n Le Wagon Lyon designed a solution for you. Based on usage history, you can now have access to a station status prediction using 5-minute increments and up to 1 hour.
 ''')
 
-
-st.subheader('Let\'s find out together')
+st.subheader('Let\'s find out together :rocket::rocket:')
 
 text_input = st.text_input(label='Address')
 
 if text_input:
     try:
-        address = geocode(text_input)
+        address = app_utils.geocode(text_input)
         address_name = ", ".join(address.get("display_name").split(', ')[:3])
         lat = float(address.get("lat"))
         lon = float(address.get("lon"))
-        zoom = 15
-        radius = 40
-        size = 22
+        zoom = 15.1
+        radius = 30
+        size = 19
 
         st.caption(f'Let\'s ride to "{address_name}"')
     except IndexError:
         st.caption(f'Please enter a valid address')
 
-pred_horizon = st.slider(label="Select your prediction horizon (in min)",
+pred_horizon = st.slider(label="Select your prediction horizon [in minutes]",
                          min_value=0,
                          max_value=60,
                          step=5)
@@ -91,7 +91,7 @@ if pred_horizon != 0:
     status_to_display = pd.DataFrame.from_dict(
         requests.get(
             MODEL_API_URL,
-            timeout=10).json()).rename_axis('station_number').reset_index()
+            timeout=15).json()).rename_axis('station_number').reset_index()
 else:
     status_to_display = get_live_status()
 
@@ -112,7 +112,7 @@ if not 'bike_stands' in stations_and_status.columns:
         'capacity'] - stations_and_status['bikes']
 
 # Creating classification
-stations_and_classification = classify_station(stations_and_status)
+stations_and_classification = app_utils.classify_station(stations_and_status)
 
 ## Creating layers
 # Creating the classification layers for the stations
@@ -120,33 +120,25 @@ layers = []
 
 for status, color in STATUS_COLOURS.items():
     layers.append(
-        create_scatter_layer(data=get_sub_dataframe_from_status(
-            stations_and_classification, status),
-                             color=COLOURS.get(color),
-                             radius=radius))
+        app_utils.create_scatter_layer(
+            data=app_utils.get_sub_dataframe_from_status(
+                stations_and_classification, status),
+            color=COLOURS.get(color),
+            radius=radius))
 
 # Creating a text layer with number of bikes over capacity
 stations_and_classification[
     'text_to_display'] = stations_and_classification.apply(
         lambda row: f"{row['bikes']}/{row['capacity']}", axis=1)
 
-text_layer = pdk.Layer("TextLayer",
-                       data=stations_and_classification,
-                       pickable=True,
-                       get_position=["lng", "lat"],
-                       get_text='text_to_display',
-                       get_color=COLOURS.get('White'),
-                       billboard=False,
-                       get_size=size,
-                       sizeUnits='meters',
-                       get_angle=0,
-                       get_text_anchor='"middle"',
-                       get_alignment_baseline="'center'")
-
+text_layer = app_utils.create_text_layer(data=stations_and_classification,
+                                         color=COLOURS.get('White'),
+                                         size=size)
 layers.append(text_layer)
 
-if lat != DEFAULT_LAT and lon != DEFAULT_LON :
-    icon_layer = create_pin_layer(lat=lat,lon=lon,size=4)
+# Creating a pin on the address if one had been given
+if lat != DEFAULT_LAT and lon != DEFAULT_LON:
+    icon_layer = app_utils.create_pin_layer(lat=lat, lon=lon, size=4)
     layers.append(icon_layer)
 
 ## Plotting the map
@@ -166,4 +158,4 @@ st.pydeck_chart(pdk.Deck(
     layers=layers,
 ))
 
-st.header('Thanks all, and Ride on!')
+st.header('\nThanks all and ... Ride On :exclamation:')
