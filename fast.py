@@ -1,10 +1,8 @@
 #from datetime import datetime
 from fastapi import FastAPI
-import pandas as pd
 from utils import get_live_status
 import pickle
 from fastapi.middleware.cors import CORSMiddleware
-import joblib
 import tensorflow as tf
 
 app = FastAPI()

@@ -12,12 +12,12 @@ COPY fast.py /fast.py
 COPY params.py /params.py
 # COPY setup.py /setup.py
 # COPY app_utils.py /app_utils.py
-COPY dummy_random_model.keras /dummy_random_model.keras
+COPY dummy_random_model_3.pkl /dummy_random_model_3.pkl
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
-RUN pip freeze > requirements.txt
+#RUN pip freeze > requirements.txt
 #CMD uvicorn app.simple:app --host 0.0.0.0
-CMD uvicorn fast:app --host 0.0.0.0 --port 8000
+CMD uvicorn fast:app --host 0.0.0.0 --port $PORT
 #CMD uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 
