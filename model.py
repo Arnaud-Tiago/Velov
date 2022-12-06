@@ -24,7 +24,11 @@ SEQUENCE_STRIDE = 1
 N_TRAIN = 1 # number_of_sequences_train
 N_TEST =  1 # number_of_sequences_test
 
-station_info = utils.get_stations_info()
+try :
+    station_info = utils.get_stations_info()
+except :
+    station_info = utils.get_stations_info(source='api')
+
 last_week_available_stations = [u'velov-10001', u'velov-10002', u'velov-10004', u'velov-10005', u'velov-10006', u'velov-10007',
 u'velov-10008', u'velov-1001', u'velov-10011', u'velov-10012', u'velov-10013', u'velov-10014', u'velov-10016', u'velov-10018',
 u'velov-1002', u'velov-10021', u'velov-10024', u'velov-10025', u'velov-10027', u'velov-10028', u'velov-1003', u'velov-10030',
@@ -139,7 +143,7 @@ def compute_metrics(classified_station_data,n_days = 7):
 def get_folds(
     df: pd.DataFrame,
     fold_length: int,
-    fold_stride: int) -> list[pd.DataFrame]:
+    fold_stride: int):
     '''
     This function slides through the Time Series dataframe of shape (n_timesteps, n_features) to create folds
     - of equal `fold_length`
@@ -158,7 +162,7 @@ def get_folds(
 
 def train_test_split_fold(fold:pd.DataFrame,
                      train_test_ratio: float,
-                     input_length: int) -> tuple[pd.DataFrame]:
+                     input_length: int):
     '''
     Returns a train dataframe and a test dataframe (fold_train, fold_test)
     from which one can sample (X,y) sequences.
