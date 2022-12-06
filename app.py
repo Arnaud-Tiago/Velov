@@ -48,8 +48,9 @@ st.title('Le Wagon Demo Day - Batch #1033')
 
 st.header(':woman-biking: Welcome to the Velo\'V prediction app :man-biking:')
 
+st.subheader('Will I have Velo\'V if I leave home in 20\':question:')
 st.caption('''
-           Cycling for 20 minutes and having the unpleasant surprise of finding the destination station full on arrival, when it was empty 20 minutes earlier...
+           Walking to the Velo\'V station and having the unpleasant surprise of seeing someone taking the last bike, when it had still several when leaving home...
            \n Velo'V users experience this regularly.
            \n
            \n Le Wagon Lyon designed a solution for you. Based on usage history, you can now have access to a station status prediction using 5-minute increments and up to 1 hour.
