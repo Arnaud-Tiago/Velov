@@ -5,6 +5,7 @@ from utils import get_live_status
 import pickle
 from fastapi.middleware.cors import CORSMiddleware
 import joblib
+import tensorflow as tf
 
 app = FastAPI()
 
@@ -22,7 +23,11 @@ def prediction():
     X_pred=get_live_status() #pd.DataFrame live df
     #load model. if it is on docker load .load()
     #model=pickle.load(open("dummy_random_model.pkl","rb"))
-    model=joblib.load("dummy_random_model.keras",mmap_mode="r")
+    #pickle_file = 'dummy_random_model_test.joblib'
+    #with open(pickle_file, 'rb') as f:  model=joblib.load(f)
+    model=pickle.load(open("dummy_random_model_3.pkl",'rb'))
+    #model=joblib.load("dummy_random_model_2.pkl")
+    #model=tf.keras.models.load_model("dummy_random_model.keras")
     #model = pickle.load(open("dummy_random_model.pkl", 'rb'))
     #model = pickle.load("dummy_random_model.pkl")
     # use model.predict(X_input)
