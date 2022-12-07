@@ -111,6 +111,8 @@ stations_and_status = pd.merge(stations_info[column_selection],
 if not 'bike_stands' in stations_and_status.columns:
     stations_and_status['bike_stands'] = stations_and_status[
         'capacity'] - stations_and_status['bikes']
+    stations_and_status = app_utils.cap_bikes_and_stands_to_capacity(
+            stations_and_status)
 
 # Creating classification
 stations_and_classification = app_utils.classify_station(stations_and_status)
