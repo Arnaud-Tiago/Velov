@@ -92,7 +92,7 @@ if pred_horizon != 0:
     status_to_display = pd.DataFrame.from_dict(
         requests.get(
             MODEL_API_URL,
-            timeout=15).json()).rename_axis('station_number').reset_index()
+            timeout=30).json()).rename_axis('station_number').reset_index()
 else:
     status_to_display = get_live_status()
 
