@@ -1,10 +1,8 @@
-#from datetime import datetime
 from fastapi import FastAPI
-import pandas as pd
-from utils import get_stations_info, get_live_status
-from model import predict
+from utils import get_live_status
+import pickle
 from fastapi.middleware.cors import CORSMiddleware
-#SERVE FUNZIONE DI PRED
+import tensorflow as tf
 
 app = FastAPI()
 
@@ -18,10 +16,14 @@ app.add_middleware(
 
 @app.get("/predict")
 def prediction():
-    X_pred=get_live_status() #pd.DataFrame live df
-
-    y_pred=predict(X_pred,n_min = 15,n_days = 7)
-    return y_pred
+    X_pred=get_live_status()
+    model=pickle.load(open("dummy_random_model_3.pkl",'rb'))
+    y_pred=model.predict(X_pred["bikes"])
+    output=X_pred[["station_number"]]
+    output["bikes"]=y_pred
+    output=output.set_index(["station_number"])
+    output_dict = output.to_dict()
+    return output_dict
 
 
 @app.get("/")

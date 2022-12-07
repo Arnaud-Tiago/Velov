@@ -2,7 +2,7 @@
 #All pack are managed by setup.py
 pandas
 numpy
-tensorflow
+tensorflow==2.10
 scikit-learn
 matplotlib
 seaborn
@@ -12,7 +12,20 @@ pytest
 pylint
 ipdb
 jupyterlab
-scikit-learn
 streamlit
 fsspec
 gcsfs
+joblib
+ipykernel
+nbresult
+
+google-cloud-bigquery<3.0.0
+google-cloud-storage
+python-dotenv
+# API
+fastapi
+pytz
+uvicorn
+# tests
+httpx
+pytest-asyncio
