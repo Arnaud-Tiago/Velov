@@ -124,3 +124,15 @@ def geocode(address):
     places = requests.get(f"https://nominatim.openstreetmap.org/search",
                           params=params_geo).json()
     return places[0]
+
+def cap_bikes_and_stands_to_capacity(data):
+    '''
+    Takes a pandas DataFrame with, 'bikes', 'bike_stands' and 'capacity' columns
+    Return the same DataFrame, making sure bike stands is capped by capacity (i.e. min(bikes,capacity) and min(bike_stands,capacity))
+    '''
+    data['bikes'] = data.apply(lambda row: min(row['bikes'], row['capacity']),
+                               axis=1)
+
+    data['bike_stands'] = data.apply(lambda row: min(row['bike_stands'], row['capacity']),axis=1)
+
+    return data
