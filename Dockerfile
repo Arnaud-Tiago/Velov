@@ -5,11 +5,13 @@ COPY utils.py /utils.py
 COPY fast.py /fast.py
 COPY params.py /params.py
 COPY dummy_random_model_3.pkl /dummy_random_model_3.pkl
+COPY velov-pred-c4eb19d1190c.json /velov-pred-c4eb19d1190c.json
 
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 CMD uvicorn fast:app --host 0.0.0.0 --port $PORT
+
 
 # COPY model.pkl /model.pkl
 # COPY app.py /app.py
