@@ -46,6 +46,7 @@ size = DEFAULT_TEXT_SIZE
 MODEL_API_URL = "https://velovdock-w4chmhalca-ew.a.run.app/predict"
 
 # The website starts here
+st.set_page_config(layout="wide")
 
 logo = Image.open('logo 4_transparent.png')
 col1, col2, col3 = st.columns([5, 5, 5])
@@ -83,6 +84,10 @@ pred_horizon = st.slider(label="Then select your prediction horizon [in minutes]
                          step=5)
 
 
+@st.cache(show_spinner=False, suppress_st_warning=True, ttl=60*3)
+def get_cache_data():
+    return  pd.DataFrame.from_dict(
+        requests.get(MODEL_API_URL, timeout=40).json()).transpose()
 
 ## Pre-treatment
 
@@ -92,6 +97,9 @@ stations_info = get_stations_info(source='online')
 stations_info = stations_info[(stations_info['lng'] != 0)
                               & (stations_info['lng'] != 0)]
 
+with st.spinner(text="'Be patient, the VAILO\':heavy_check_mark: team is using its crystal ball' to get the data..."):
+    predictions = get_cache_data()
+
 # Fetching the status to display, depending on pred horizon
 if pred_horizon == 0:
     status_to_display = get_live_status()
@@ -99,9 +107,6 @@ else:
     stations = get_live_status().reset_index(
     )['station_number'].sort_values(ascending=True).reset_index().drop(
         columns='index')
-
-    predictions = pd.DataFrame.from_dict(
-        requests.get(MODEL_API_URL, timeout=40).json()).transpose()
 
     stations.set_index(predictions.index,inplace=True)
 
