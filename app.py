@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 
 import pydeck as pdk
 
@@ -88,13 +89,23 @@ stations_info = stations_info[(stations_info['lng'] != 0)
                               & (stations_info['lng'] != 0)]
 
 # Fetching the status to display, depending on pred horizon
-if pred_horizon != 0:
-    status_to_display = pd.DataFrame.from_dict(
-        requests.get(
-            MODEL_API_URL,
-            timeout=30).json()).rename_axis('station_number').reset_index()
-else:
+if pred_horizon == 0:
     status_to_display = get_live_status()
+else:
+    stations = get_live_status().reset_index(
+    )['station_number'].sort_values(ascending=True).reset_index().drop(
+        columns='index')
+
+    predictions = pd.DataFrame.from_dict(
+        requests.get(MODEL_API_URL, timeout=30).json()).transpose()
+
+    stations.set_index(predictions.index,inplace=True)
+
+    column_to_display = pred_horizon % 5
+    status_to_display = pd.concat([stations, predictions], axis=1)[['station_number',str(column_to_display)]].rename(columns={str(column_to_display):'bikes'})
+
+    status_to_display['bikes'] = status_to_display['bikes'].apply(
+        np.round).astype(int).apply(lambda x: max(x, 0))
 
 # Merging station status to display with station infos
 status_to_display['station_number'] = status_to_display[
@@ -159,6 +170,7 @@ view_state = pdk.ViewState(
 st.pydeck_chart(pdk.Deck(
     initial_view_state=view_state,
     layers=layers,
+    map_style='light'
 ))
 
 st.header('\nThanks all and ... Ride On :exclamation:')
