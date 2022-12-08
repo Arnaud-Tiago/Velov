@@ -414,3 +414,30 @@ class MinMaxNormalization():
         for i in range (X.shape[2]):
             X[:,:,i] = X[:,:,i] * self._maxs[i]
         return X
+
+def get_savage_train_test_split(
+    df:pd.DataFrame,
+    train_size:int,
+    test_size:int,
+    input_length:int,
+    output_length:int):
+    '''
+    - given a fold, it returns a list of sequences (X_i,y_i)
+    - with the starting point of the sequence being chosen at random
+    '''
+    X_train = []
+    y_train=[]
+    X_test = []
+    y_test=[]
+    
+    for i in range(train_size):
+        (X_i,y_i)= get_Xi_yi(df, input_length,output_length)
+        X_train.append(X_i)
+        y_train.append(y_i)
+
+    for i in range(test_size):
+        (X_i,y_i)= get_Xi_yi(df, input_length,output_length)
+        X_test.append(X_i)
+        y_test.append(y_i)
+    
+    return(np.array(X_train),np.array(y_train),np.array(X_test),np.array(y_test))
