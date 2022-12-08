@@ -84,7 +84,7 @@ pred_horizon = st.slider(label="Then select your prediction horizon [in minutes]
                          step=5)
 
 
-@st.cache(show_spinner=False, suppress_st_warning=True, ttl=60*3)
+@st.cache(show_spinner=False, suppress_st_warning=True, ttl=60*2)
 def get_cache_data():
     return  pd.DataFrame.from_dict(
         requests.get(MODEL_API_URL, timeout=40).json()).transpose()
