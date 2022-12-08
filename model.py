@@ -47,6 +47,7 @@ remove_hole = True
 hole_threshold = "2022-06-11"
 step = 5
 high_t = 12
+batch_size = 32
 
 try :
     station_info = utils.get_stations_info()
