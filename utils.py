@@ -142,6 +142,46 @@ def get_last_week_station(number, nb_days:int=7) -> pd.DataFrame:
     df = df.astype(float).astype(int)
     return df
 
+def get_station_recent_past(number, nb_days:int=7) -> pd.DataFrame:
+    '''
+    This function returns a DataFrame containing the last seven days of data for the station identified by 'number'. The DataFrame contains:
+    index : 5-minutes timestamps
+    bikes : total number of available bikes at a given timestamp in the station
+    '''
+    today = (str(dt.today())[:-7] + 'Z').replace(' ','T')
+    previous = (str(dt.today() - timedelta(nb_days+1))[:-nb_days] + 'Z').replace(' ','T')
+    url = f'https://download.data.grandlyon.com/sos/velov?request=GetObservation&service=SOS&version=1.0.0&offering=reseau_velov&procedure=velov-{number}&observedProperty=bikes&eventTime={previous}/{today}&responseFormat=application/json'
+    response = requests.get(url)
+    df = pd.DataFrame(response.json()['ObservationCollection']['member'][0]['result']['DataArray']['values'],columns=['time','bikes'])
+    df['time']=pd.to_datetime(df['time'], utc=True)
+    df.rename(columns={'bikes': number}, inplace=True)
+    df = df.set_index('time')
+    df = df.astype(float).astype(int)
+    return df
+
+def get_all_recent_past(stations, nb_days:int=7,diff=True) -> np.array:
+
+    for i,station in enumerate(stations):
+        try :
+            temp_df = get_station_recent_past(station,nb_days)
+            if i ==0:
+                bikes_df = temp_df
+            else:
+                bikes_df = bikes_df.merge(temp_df,
+                                    how='inner',
+                                    left_index=True,
+                                    right_index=True)
+        except ValueError:
+            print(f'Station {station} not found')
+
+    bikes_df.dropna(inplace=True)
+    if diff:
+        for col in bikes_df.columns:
+            bikes_df[col] = bikes_df[col].diff()
+            bikes_df.dropna(inplace=True)
+
+    return np.array(bikes_df)
+
 def get_live_status() -> pd.DataFrame:
     '''
     Returns the live status of the whole vélov system as a DataFrame with:
