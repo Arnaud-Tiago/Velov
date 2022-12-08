@@ -8,6 +8,8 @@ from utils import get_stations_info, get_live_status
 import app_utils
 import requests
 
+from PIL import Image
+
 COLOURS = {
     'Black': [0, 0, 0, 150],
     'White': [255, 255, 255, 150],
@@ -45,21 +47,20 @@ MODEL_API_URL = "https://velovdock-w4chmhalca-ew.a.run.app/predict"
 
 # The website starts here
 
+logo = Image.open('logo 4_transparent.png')
+col1, col2, col3 = st.columns([5, 5, 5])
+col2.image(logo, use_column_width=True)
+
 st.title('Le Wagon Demo Day - Batch #1033')
 
-st.header(':woman-biking: Welcome to the Velo\'V prediction app :man-biking:')
+st.header(':woman-biking: Welcome to the VAILO\':heavy_check_mark: prediction app :man-biking:')
 
-st.subheader('Will I have Velo\'V if I leave home in 20\':question:')
-st.caption('''
-           Walking to the Velo\'V station and having the unpleasant surprise of seeing someone taking the last bike, when it had still several when leaving home...
-           \n Velo'V users experience this regularly.
-           \n
-           \n Le Wagon Lyon designed a solution for you. Based on usage history, you can now have access to a station status prediction using 5-minute increments and up to 1 hour.
-''')
+st.subheader(
+    'Will I have Vélo\'V if I leave home in 20\':question: Let\'s find out together :rocket::rocket:'
+)
 
-st.subheader('Let\'s find out together :rocket::rocket:')
-
-text_input = st.text_input(label='Address')
+# Dealing with address form
+text_input = st.text_input(label='Type your address here')
 
 if text_input:
     try:
@@ -75,10 +76,13 @@ if text_input:
     except IndexError:
         st.caption(f'Please enter a valid address')
 
-pred_horizon = st.slider(label="Select your prediction horizon [in minutes]",
+# Prediction horizon slider bar
+pred_horizon = st.slider(label="Then select your prediction horizon [in minutes]",
                          min_value=0,
                          max_value=60,
                          step=5)
+
+
 
 ## Pre-treatment
 
@@ -97,7 +101,7 @@ else:
         columns='index')
 
     predictions = pd.DataFrame.from_dict(
-        requests.get(MODEL_API_URL, timeout=30).json()).transpose()
+        requests.get(MODEL_API_URL, timeout=40).json()).transpose()
 
     stations.set_index(predictions.index,inplace=True)
 
@@ -174,3 +178,6 @@ st.pydeck_chart(pdk.Deck(
 ))
 
 st.header('\nThanks all and ... Ride On :exclamation:')
+
+col4, col5, col6 = st.columns([5, 5, 5])
+col5.image(logo, use_column_width=True)
