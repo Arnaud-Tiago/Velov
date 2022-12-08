@@ -150,7 +150,7 @@ def increment_data(source='local', save=False, verbose=1):
 
 def save_model_in_cloud(model):
     fs = gcsfs.GCSFileSystem(project="velov-pred")
-    client = storage.Client()
+    client = storage.Client.from_service_account_json('velov-pred-63bfe9de0785.json')
     bucket = client.bucket("velov_bucket")
     blob = bucket.blob("model/model.pkl")
     with fs.open(f'velov_bucket/{blob.name}', mode = 'wb') as f:
