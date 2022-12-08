@@ -214,6 +214,32 @@ def get_X_y(
     return(np.array(X),np.array(y))
 
 
+def savage_train_test_split(
+    df:pd.DataFrame,
+    train_size:int,
+    test_size:int,
+    input_length:int,
+    output_length:int):
+    
+    X_train = []
+    y_train = []
+    
+    X_test = []
+    y_test = []
+    
+    for i in range(train_size):
+        (X_i,y_i)= get_Xi_yi(df, input_length,output_length)
+        X_train.append(X_i)
+        y_train.append(y_i)
+    
+    for i in range(test_size):
+        (X_i,y_i)= get_Xi_yi(df, input_length,output_length)
+        X_test.append(X_i)
+        y_test.append(y_i)    
+    
+    return(np.array(X_train),np.array(y_train),np.array(X_test),np.array(y_test))
+
+
 def train_test_split(
     n_sequences = 100,
     step = 15,
