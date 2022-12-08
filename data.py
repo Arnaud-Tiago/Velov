@@ -8,6 +8,9 @@ import seaborn as sns
 from datetime import datetime
 import requests
 from datetime import timedelta
+import pickle
+import gcsfs
+import joblib
 
 from utils import get_stations_info, get_last_week_station
 from params import LOCAL_DATA_PATH_CLEAN, LOCAL_DATA_PATH_RAW, LOCAL_ROOT_PATH, BUCKET_NAME
@@ -143,4 +146,14 @@ def increment_data(source='local', save=False, verbose=1):
         save_data(clean_df, table_name= 'all_stations_live', clean=True ,destination=source)
     
     return clean_df
-    
+
+
+def save_model_in_cloud(model):
+    fs = gcsfs.GCSFileSystem(project="velov-pred")
+    client = storage.Client()
+    bucket = client.bucket("velov_bucket")
+    blob = bucket.blob("model/model.pkl")
+    with fs.open(f'velov_bucket/{blob.name}', mode = 'wb') as f:
+        pickle.dump(model, f)
+    print("Model successfully saved in the Cloud")
+    return 
