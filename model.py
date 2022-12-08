@@ -7,22 +7,46 @@ from datetime import timedelta
 from sklearn.metrics import  accuracy_score,mean_squared_error,recall_score,f1_score,precision_score
 import utils
 import cleaning
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-
+from tensorflow.keras.metrics import MeanSquaredError, MeanAbsoluteError, RootMeanSquaredError
+from tensorflow.keras import layers
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers.schedules import ExponentialDecay
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers.experimental.preprocessing import Normalization
 from tensorflow.keras import models, layers, optimizers, metrics
 from tensorflow.keras.layers import Lambda
-
-from tensorflow.keras.layers.experimental.preprocessing import Normalization
 from tensorflow.keras.callbacks import EarlyStopping
 
-FOLD_LENGTH = int(24 * 12 * 31) # 24 hours per day, 12 stamps per hour, 31 days
-FOLD_STRIDE = int(24 * 12 * 7) # 1 week
-TRAIN_TEST_RATIO = 0.66
-INPUT_LENGTH = int(24*12*14) # 24 hours per day, 12 stamps per hour, 14 days
-OUTPUT_LENGTH = 12
+from cleaning import get_clean_bikes_dataframe
+from utils import get_stations_info, get_live_status
+from data import save_model_in_cloud
+
+
+
+
+
+nb_ts_per_hour = int(60 / step)
+INPUT_LENGTH = 14 * 24 * nb_ts_per_hour # 14 days * 24 hours
+OUTPUT_LENGTH = nb_ts_per_hour
 SEQUENCE_STRIDE = 1
-N_TRAIN = 1 # number_of_sequences_train
-N_TEST =  1 # number_of_sequences_test
+OUTPUT_LENGTH = 12
+TRAIN_TEST_RATIO = 0.7
+SEQUENCE_STRIDE = 1
+FOLD_STRIDE = 1
+N_TRAIN = 700 # number_of_sequences_train
+N_TEST =  300 # number_of_sequences_test
+colab = False
+station_sequence = False
+diff = True 
+folding = False
+
+remove_hole = True
+hole_threshold = "2022-06-11"
+step = 5
+high_t = 12
 
 try :
     station_info = utils.get_stations_info()
@@ -441,3 +465,74 @@ def get_savage_train_test_split(
         y_test.append(y_i)
     
     return(np.array(X_train),np.array(y_train),np.array(X_test),np.array(y_test))
+
+######  
+
+def get_training_testing_data(diff=True, folding=False,remove_hole=True):
+
+    bikes_df = get_clean_bikes_dataframe(source='cloud')
+    step_str = f'{step}min'
+    bikes_df=bikes_df.sort_values(by="time")
+    bikes_df['time']=pd.to_datetime(bikes_df['time'])
+    bikes_df = bikes_df.resample(step_str, on='time').mean()
+
+    if diff:
+        for col in bikes_df.columns:
+            bikes_df[col] = bikes_df[col].diff()
+        bikes_df.dropna(inplace=True)
+    if remove_hole :
+        bikes_df = bikes_df[bikes_df.index > hole_threshold]
+    cols = list(bikes_df.columns)
+    cols.sort()
+    bikes_df=bikes_df[cols]
+    FOLD_LENGTH = bikes_df.shape[0]
+    if folding :
+        bikes_folds = get_folds(bikes_df, FOLD_LENGTH, FOLD_STRIDE)
+        bikes_fold = bikes_folds[0]
+        (bikes_fold_train, bikes_fold_test) = train_test_split_fold(bikes_fold, TRAIN_TEST_RATIO, INPUT_LENGTH)
+        X_train_bikes, y_train_bikes = get_X_y(bikes_fold_train, N_TRAIN, INPUT_LENGTH, OUTPUT_LENGTH)
+        X_test_bikes, y_test_bikes = get_X_y(bikes_fold_test, N_TEST, INPUT_LENGTH, OUTPUT_LENGTH)
+    else :
+        X_train_bikes, y_train_bikes, X_test_bikes, y_test_bikes = get_savage_train_test_split(bikes_df,N_TRAIN,N_TEST,INPUT_LENGTH,OUTPUT_LENGTH)
+    
+    return X_train_bikes, y_train_bikes, X_test_bikes, y_test_bikes
+
+def init_diff_model(X_train, y_train):
+    rmse_base = RootMeanSquaredError(name = 'rmse')
+    normalizer = Normalization()
+    normalizer.adapt(X_train)
+
+    model = Sequential([
+        normalizer,
+        layers.GRU(units=512, activation='tanh', return_sequences=True),
+        #layers.Dropout(0.2),
+        layers.GRU(units=64, activation='tanh', return_sequences=True),
+        #layers.Dropout(0.2),
+        #layers.Dense(256,activation = 'relu'),
+        #layers.Dropout(0.2),
+        layers.Dense(512,activation = 'relu'),
+        layers.Lambda(lambda x:x[:,:high_t,:]),
+        #layers.Dropout(0.2),
+        layers.Dense(64,activation = 'relu'),
+        layers.Dense(64,activation = 'relu'),
+        layers.Dense(y_train.shape[2], activation='linear')  
+    ])
+    
+    model.compile(optimizer='rmsprop',
+                loss='mse',
+                #loss=make_custom_mse(batch_size, low_threshold=low_t, high_threshold=high_t),
+                #run_eagerly = True,
+                metrics=[rmse_base,'mae'])
+    return model
+
+def fit_model(model,X,y):
+    es = EarlyStopping(patience=2,restore_best_weights = True)
+    history = model.fit(X,y,epochs = 4,callbacks=es,batch_size=batch_size, validation_split=0.3)
+    return(model,history)
+
+def handle_model(X_train_bikes, y_train_bikes, X_test_bikes, y_test_bikes):
+    model = init_diff_model(X_train_bikes, y_train_bikes)
+    model,history = fit_model(model,X_train_bikes,y_train_bikes)
+    res = model.evaluate(X_test_bikes,y_test_bikes)
+    
+    return history, res
