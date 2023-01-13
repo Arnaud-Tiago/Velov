@@ -8,6 +8,8 @@ from utils import get_stations_info, get_live_status
 import app_utils
 import requests
 
+import pickle
+
 from PIL import Image
 
 COLOURS = {
@@ -43,6 +45,7 @@ zoom = DEFAULT_ZOOM
 radius = DEFAULT_CIRCLE_RADIUS
 size = DEFAULT_TEXT_SIZE
 
+source_model = "local" # if "local" loads locally, else got to API URL
 MODEL_API_URL = "https://velovdock-w4chmhalca-ew.a.run.app/predict"
 
 # The website starts here
@@ -85,9 +88,19 @@ pred_horizon = st.slider(label="Then select your prediction horizon [in minutes]
 
 
 @st.cache(show_spinner=False, suppress_st_warning=True, ttl=60*2)
-def get_cache_data():
-    return  pd.DataFrame.from_dict(
-        requests.get(MODEL_API_URL, timeout=40).json()).transpose()
+def get_cache_data(source='online'):
+    if source== 'local':
+        #load model
+        model = pickle.load(open('model.pkl', 'rb'))
+        # then .predict
+        print(model.predict(get_live_status()[['bikes']]))
+        return pd.DataFrame(model.predict(get_live_status()[[
+            'bikes'
+        ]])).rename(columns={k:str(k) for k in range(11)})
+
+    else:
+        return  pd.DataFrame.from_dict(
+            requests.get(MODEL_API_URL, timeout=40).json()).transpose()
 
 ## Pre-treatment
 
@@ -98,7 +111,7 @@ stations_info = stations_info[(stations_info['lng'] != 0)
                               & (stations_info['lng'] != 0)]
 
 with st.spinner(text="Be patient, the VAILO\':heavy_check_mark: team is using its crystal ball..."):
-    predictions = get_cache_data()
+    predictions = get_cache_data(source = source_model)
 
 # Fetching the status to display, depending on pred horizon
 if pred_horizon == 0:
@@ -111,6 +124,10 @@ else:
     stations.set_index(predictions.index,inplace=True)
 
     column_to_display = pred_horizon % 5
+    print(stations)
+    print(predictions)
+    print(stations)
+    print(pd.concat([stations, predictions], axis=1).columns)
     status_to_display = pd.concat([stations, predictions], axis=1)[['station_number',str(column_to_display)]].rename(columns={str(column_to_display):'bikes'})
 
     status_to_display['bikes'] = status_to_display['bikes'].apply(
