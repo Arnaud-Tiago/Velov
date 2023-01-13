@@ -89,14 +89,18 @@ pred_horizon = st.slider(label="Then select your prediction horizon [in minutes]
 
 @st.cache(show_spinner=False, suppress_st_warning=True, ttl=60*2)
 def get_cache_data(source='online'):
+    '''
+    Computes the prediction based on live status
+    If source is 'local', uses the model.pkl in the repository.
+    Otherwise used the API
+    '''
     if source== 'local':
-        #load model
         model = pickle.load(open('model.pkl', 'rb'))
-        # then .predict
-        print(model.predict(get_live_status()[['bikes']]))
-        return pd.DataFrame(model.predict(get_live_status()[[
-            'bikes'
-        ]])).rename(columns={k:str(k) for k in range(11)})
+        X = get_live_status().reset_index().sort_values(by='station_number',
+            ascending=True).reset_index().drop(columns='index')
+
+        #print('X is the following', X[['station_number','bikes']])
+        return pd.DataFrame(model.predict(X['bikes'])).rename(columns={k:str(k) for k in range(11)})
 
     else:
         return  pd.DataFrame.from_dict(
@@ -120,14 +124,12 @@ else:
     stations = get_live_status().reset_index(
     )['station_number'].sort_values(ascending=True).reset_index().drop(
         columns='index')
-
+    #print('THE STATIONS', stations)
     stations.set_index(predictions.index,inplace=True)
+    #print('THE STATIONS new index', stations)
 
     column_to_display = pred_horizon % 5
-    print(stations)
-    print(predictions)
-    print(stations)
-    print(pd.concat([stations, predictions], axis=1).columns)
+    #print('THE PREDICTIONS', predictions)
     status_to_display = pd.concat([stations, predictions], axis=1)[['station_number',str(column_to_display)]].rename(columns={str(column_to_display):'bikes'})
 
     status_to_display['bikes'] = status_to_display['bikes'].apply(
