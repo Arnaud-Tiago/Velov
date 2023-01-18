@@ -115,7 +115,7 @@ stations_info = stations_info[(stations_info['lng'] != 0)
                               & (stations_info['lng'] != 0)]
 
 with st.spinner(text="Be patient, the VAILO\':heavy_check_mark: team is using its crystal ball..."):
-    predictions = get_cache_data(source = source_model)
+    predictions = get_cache_data(source = source_model)*64
 
 # Fetching the status to display, depending on pred horizon
 if pred_horizon == 0:
